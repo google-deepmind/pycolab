@@ -21,7 +21,7 @@ from __future__ import division
 from __future__ import print_function
 
 import sys
-import tensorflow as tf
+import unittest
 
 from pycolab import ascii_art
 from pycolab.prefab_parts import sprites as prefab_sprites
@@ -571,7 +571,7 @@ class MazeWalkerTest(tt.PycolabTestCase):
 
 def main(argv=()):
   del argv  # Unused.
-  tf.test.main()
+  unittest.main()
 
 
 if __name__ == '__main__':

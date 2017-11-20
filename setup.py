@@ -48,7 +48,7 @@ setuptools.setup(
     author='The pycolab authors',
     author_email='pycolab@deepmind.com',
     license='Apache 2.0',
-    classifers=[
+    classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Console',
         'Environment :: Console :: Curses',
@@ -79,8 +79,7 @@ setuptools.setup(
         'six',
     ],
     extras_require={
-        'testing': ['tensorflow>=0.12'],
-        'ndimage': ['scipy>=0.17.1'],
+        'ndimage': ['scipy>=0.13.3'],
     },
 
     packages=setuptools.find_packages(),
@@ -90,7 +89,7 @@ setuptools.setup(
             'aperture = pycolab.examples.aperture:main',
             'apprehend = pycolab.examples.apprehend:main',
             ('extraterrestrial_marauders = '
-             'pycolab.examples.apprehend:extraterrestrial_marauders:main'),
+             'pycolab.examples.extraterrestrial_marauders:main'),
             'fluvial_natation = pycolab.examples.fluvial_natation:main',
             'hello_world = pycolab.examples.hello_world:main',
             'scrolly_maze = pycolab.examples.scrolly_maze:main',
@@ -102,10 +101,8 @@ setuptools.setup(
             'cliff_walk = pycolab.examples.classics.cliff_walk:main',
             'four_rooms = pycolab.examples.classics.four_rooms:main',
         ],
-        'tests': [
-            'engine_test = pycolab.tests.engine_test:main [testing]',
-            'maze_walker_test = pycolab.tests.maze_walker_test:main [testing]',
-            'scrolling_test = pycolab.tests.scrolling_test:main [testing]',
-        ],
     },
+
+    test_suite='nose.collector',
+    tests_require=['nose'],
 )

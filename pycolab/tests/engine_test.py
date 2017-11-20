@@ -26,7 +26,7 @@ from __future__ import print_function
 
 import numpy as np
 import sys
-import tensorflow as tf
+import unittest
 
 from pycolab import ascii_art
 from pycolab import rendering
@@ -554,7 +554,7 @@ class EngineTest(tt.PycolabTestCase):
 
 def main(argv=()):
   del argv  # Unused.
-  tf.test.main()
+  unittest.main()
 
 
 if __name__ == '__main__':

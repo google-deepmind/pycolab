@@ -12,9 +12,11 @@ experience on most UNIX-compatible systems:
      xterm on linux). (Avoid screen/tmux for now---just the terminal, please.)
   2. set the terminal type to `xterm-256color` (usually, you do this by typing
      `export TERM=xterm-256color` at the command prompt).
-  3. run the example games! One easy way is to cd to `pycolab/`'s parent
-     directory and run python with the appropriate `PYTHONPATH` environment
-     variable. Example command line for `bash`-like shells:
+  3. run the example games! One easy way is to cd to just above the `pycolab/`
+     library directory (this is the root directory of the git repository or the
+     distribution tarball, if you're using either of those) and run python with
+     the appropriate `PYTHONPATH` environment variable. Example command line for
+     `bash`-like shells:
      `PYTHONPATH=. python -B pycolab/examples/scrolly_maze.py`.
 
 ## Okay, install some dependencies first.
@@ -23,9 +25,8 @@ If that didn't work, you may need to obtain the following software packages that
 pycolab depends on:
 
   1. Python 2.7. We've had success with 2.7.6; other versions may work.
-  2. Numpy. Our version is 1.13.3.
-  3. TensorFlow, but only for running the tests in the `tests/` subdirectory.
-  4. Scipy, but only for running one of the examples. We have 0.13.3.
+  2. Numpy. Our version is 1.13.3, but 1.9 seems to have the necessary features.
+  3. Scipy, but only for running one of the examples. We have 0.13.3.
 
 ## Overview
 

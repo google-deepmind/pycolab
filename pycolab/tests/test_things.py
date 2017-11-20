@@ -50,7 +50,7 @@ from __future__ import division
 from __future__ import print_function
 
 import numpy as np
-import tensorflow as tf
+import unittest
 
 from pycolab import ascii_art
 from pycolab import things as plab_things
@@ -291,7 +291,7 @@ class TestScrolly(drapes.Scrolly, TestDrape):
       self._stay(the_plot)
 
 
-class PycolabTestCase(tf.test.TestCase):
+class PycolabTestCase(unittest.TestCase):
   """`TestCase` subclass with convenience methods for pycolab testing."""
 
   def assertBoard(self, actual_board, art, err_msg=''):
