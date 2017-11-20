@@ -221,7 +221,7 @@ def make_game(level_idx):
       z_order=['X', 'A'])  # Draw player on top of aperture.
 
 
-def main(argv):
+def main(argv=()):
   game = make_game(int(argv[1]) if len(argv) > 1 else 0)
 
   ui = human_ui.CursesUi(

@@ -20,6 +20,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import sys
 import tensorflow as tf
 
 from pycolab import ascii_art
@@ -568,5 +569,10 @@ class MazeWalkerTest(tt.PycolabTestCase):
     )
 
 
-if __name__ == '__main__':
+def main(argv=()):
+  del argv  # Unused.
   tf.test.main()
+
+
+if __name__ == '__main__':
+  main(sys.argv)

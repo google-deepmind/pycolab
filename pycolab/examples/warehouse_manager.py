@@ -295,7 +295,7 @@ class PlayerSprite(prefab_sprites.MazeWalker):
       self._east(board, the_plot)
 
 
-def main(argv):
+def main(argv=()):
   # Build a Warehouse Manager game.
   game = make_game(int(argv[1]) if len(argv) > 1 else 0)
 
