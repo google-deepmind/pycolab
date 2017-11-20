@@ -13,10 +13,10 @@ experience on most UNIX-compatible systems:
   2. set the terminal type to `xterm-256color` (usually, you do this by typing
      `export TERM=xterm-256color` at the command prompt).
   3. run the example games! One easy way is to cd to just above the `pycolab/`
-     library directory (this is the root directory of the git repository or the
-     distribution tarball, if you're using either of those) and run python with
-     the appropriate `PYTHONPATH` environment variable. Example command line for
-     `bash`-like shells:
+     library directory (that is, cd to the root directory of the git repository
+     or the distribution tarball, if you're using either of those) and run
+     python with the appropriate `PYTHONPATH` environment variable. Example
+     command line for `bash`-like shells:
      `PYTHONPATH=. python -B pycolab/examples/scrolly_maze.py`.
 
 ## Okay, install some dependencies first.
