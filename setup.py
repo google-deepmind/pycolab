@@ -85,7 +85,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     zip_safe=True,
     entry_points={
-        'examples': [
+        'console_scripts': [
             'aperture = pycolab.examples.aperture:main',
             'apprehend = pycolab.examples.apprehend:main',
             ('extraterrestrial_marauders = '
@@ -95,8 +95,6 @@ setuptools.setup(
             'scrolly_maze = pycolab.examples.scrolly_maze:main',
             'shockwave = pycolab.examples.shockwave:main [ndimage]',
             'warehouse_manager = pycolab.examples.warehouse_manager:main',
-        ],
-        'classic_examples': [
             'chain_walk = pycolab.examples.classics.chain_walk:main',
             'cliff_walk = pycolab.examples.classics.cliff_walk:main',
             'four_rooms = pycolab.examples.classics.four_rooms:main',
