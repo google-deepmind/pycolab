@@ -49,13 +49,16 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import numpy as np
 import unittest
+
+import numpy as np
 
 from pycolab import ascii_art
 from pycolab import things as plab_things
 from pycolab.prefab_parts import drapes
 from pycolab.prefab_parts import sprites
+
+import six
 
 
 def pre_update(engine, character, thing_to_do):
@@ -309,8 +312,8 @@ class PycolabTestCase(unittest.TestCase):
     Raises:
       AssertionError: `art` does not match `actual_board`.
     """
-    np.testing.assert_array_equal(actual_board.view('|S1'),
-                                  ascii_art.ascii_art_to_s1_nparray(art),
+    np.testing.assert_array_equal(actual_board,
+                                  ascii_art.ascii_art_to_uint8_nparray(art),
                                   err_msg)
 
   def expectBoard(self, art, err_msg=''):  # pylint: disable=invalid-name
@@ -385,9 +388,9 @@ class PycolabTestCase(unittest.TestCase):
 
       engine.the_plot['machinima_args'] = args
 
-      for character, thing_to_do in pre_updates.iteritems():
+      for character, thing_to_do in six.iteritems(pre_updates):
         pre_update(engine, character, thing_to_do)
-      for character, thing_to_do in post_updates.iteritems():
+      for character, thing_to_do in six.iteritems(post_updates):
         post_update(engine, character, thing_to_do)
 
       observation, reward, discount = engine.play(action)

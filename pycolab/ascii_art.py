@@ -25,6 +25,8 @@ import numpy as np
 from pycolab import engine
 from pycolab import things
 
+import six
+
 
 def ascii_art_to_game(art,
                       what_lies_beneath,
@@ -129,15 +131,17 @@ def ascii_art_to_game(art,
   if sprites is None: sprites = {}
   if drapes is None: drapes = {}
   sprites = {char: sprite if isinstance(sprite, Partial) else Partial(sprite)
-             for char, sprite in sprites.iteritems()}
+             for char, sprite in six.iteritems(sprites)}
   drapes = {char: drape if isinstance(drape, Partial) else Partial(drape)
-            for char, drape in drapes.iteritems()}
+            for char, drape in six.iteritems(drapes)}
 
   # Likewise, turn a bare Backdrop class into an argument-free Partial.
   if not isinstance(backdrop, Partial): backdrop = Partial(backdrop)
 
   # Compile characters corresponding to all Sprites and Drapes.
-  non_backdrop_characters = set(sprites.keys() + drapes.keys())
+  non_backdrop_characters = set()
+  non_backdrop_characters.update(sprites.keys())
+  non_backdrop_characters.update(drapes.keys())
   if update_schedule is None: update_schedule = list(non_backdrop_characters)
 
   # If update_schedule is a string (someone wasn't reading the docs!),
@@ -193,15 +197,15 @@ def ascii_art_to_game(art,
 
   ### 3. Convert all ASCII art to numpy arrays ###
 
-  # Now convert the ASCII art array to a numpy array of strings.
-  art = ascii_art_to_s1_nparray(art)
+  # Now convert the ASCII art array to a numpy array of uint8s.
+  art = ascii_art_to_uint8_nparray(art)
 
   # In preparation for masking out sprites and drapes from the ASCII art array
   # (to make the background), do similar for what_lies_beneath.
   if isinstance(what_lies_beneath, str):
-    what_lies_beneath = np.full_like(art, what_lies_beneath)
+    what_lies_beneath = np.full_like(art, ord(what_lies_beneath))
   else:
-    what_lies_beneath = ascii_art_to_s1_nparray(what_lies_beneath)
+    what_lies_beneath = ascii_art_to_uint8_nparray(what_lies_beneath)
     if art.shape != what_lies_beneath.shape:
       raise ValueError(
           'if not a single ASCII character, what_lies_beneath must be ASCII '
@@ -228,7 +232,7 @@ def ascii_art_to_game(art,
     # Switch to this character's update group.
     game.update_group(update_group_for[character])
     # Find locations where this character appears in the ASCII art.
-    mask = art == character
+    mask = art == ord(character)
 
     if character in drapes:
       # Add the drape to the Engine.
@@ -263,7 +267,7 @@ def ascii_art_to_game(art,
   ### 7. Add the Backdrop to the engine ###
 
   game.set_prefilled_backdrop(
-      characters=''.join(np.unique(art)),
+      characters=''.join(chr(c) for c in np.unique(art)),
       prefill=art.view(np.uint8),
       backdrop_class=backdrop.pycolab_thing,
       *backdrop.args, **backdrop.kwargs)
@@ -272,12 +276,11 @@ def ascii_art_to_game(art,
   return game
 
 
-def ascii_art_to_s1_nparray(art):
-  """Construct a numpy array of dtype `|S1` from an ASCII art diagram.
+def ascii_art_to_uint8_nparray(art):
+  """Construct a numpy array of dtype `uint8` from an ASCII art diagram.
 
   This function takes ASCII art diagrams (expressed as lists or tuples of
-  equal-length strings) and derives 2-D numpy arrays with dtype `|S1` (meaning
-  that each entry is a length-1 string).
+  equal-length strings) and derives 2-D numpy arrays with dtype `uint8`.
 
   Args:
     art: An ASCII art diagram; this should be a list or tuple whose values are
@@ -289,12 +292,15 @@ def ascii_art_to_s1_nparray(art):
   Raises:
     ValueError: `art` wasn't an ASCII art diagram, as described.
   """
+  error_text = (
+      'the argument to ascii_art_to_uint8_nparray must be a list (or tuple) '
+      'of strings containing the same number of strictly-ASCII characters.')
   try:
-    return np.array([list(line) for line in art], dtype='|S1')
+    art = np.vstack(np.fromstring(line, dtype=np.uint8) for line in art)
   except ValueError:
-    raise ValueError(
-        'the argument to ascii_art_to_s1_nparray must be a list (or tuple) of '
-        'strings containing the same number of ASCII characters.')
+    raise ValueError(error_text)
+  if np.any(art > 127): raise ValueError(error_text)
+  return art
 
 
 class Partial(object):

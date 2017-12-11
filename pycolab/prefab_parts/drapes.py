@@ -183,23 +183,29 @@ class Scrolly(things.Drape):
             in the `whole_pattern_art` marks the intended initial scrolling
             position of the game board (specifically, its top-left corner) with
             respect to the game world diagram.
-        what_lies_beneath: the character that should replace the
+        what_lies_beneath: the ASCII character that should replace the
             `board_northwest_corner_mark` in the `whole_pattern_art` when using
             the art to create `Scrolly` constructor arguments.
 
       Raises:
-        ValueError: any dimension of the game board is larger than the
-            corresponding dimension of the game world depicted in
-            `whole_pattern_art`.
+        ValueError: `what_lies_beneath` was not an ASCII character, or any
+            dimension of the game board is larger than the corresponding
+            dimension of the game world depicted in `whole_pattern_art`.
         RuntimeError: the `whole_pattern_art` diagram does not contain exactly
             one of the `board_northwest_corner_mark` characters.
       """
+      # Verify that what_lies_beneath is ASCII.
+      if ord(what_lies_beneath) > 127: raise ValueError(
+          'The what_lies_beneath value used to build a Scrolly.PatternInfo '
+          'must be an ASCII character.')
+
       # Convert the pattern art into an array of character strings.
-      self._whole_pattern_art = ascii_art.ascii_art_to_s1_nparray(
+      self._whole_pattern_art = ascii_art.ascii_art_to_uint8_nparray(
           whole_pattern_art)
       self._board_northwest_corner = self._whole_pattern_position(
           board_northwest_corner_mark, 'the Scrolly.PatternInfo constructor')
-      self._whole_pattern_art[self._board_northwest_corner] = what_lies_beneath
+      self._whole_pattern_art[self._board_northwest_corner] = (
+          ord(what_lies_beneath))
 
       # Determine the shape of the game board. We try two ways---the first way
       # assumes that board_art_or_shape is the game board, the second assumes
@@ -262,12 +268,12 @@ class Scrolly(things.Drape):
       """
       # some (not all) kwargs that you can pass on to Scrolly.__init__.
       return {'board_shape': self._board_shape,
-              'whole_pattern': self._whole_pattern_art == character,
+              'whole_pattern': self._whole_pattern_art == ord(character),
               'board_northwest_corner': self._board_northwest_corner}
 
     def _whole_pattern_position(self, character, error_name):
       """Find the absolute location of `character` in game world ASCII art."""
-      pos = list(np.argwhere(self._whole_pattern_art == character))
+      pos = list(np.argwhere(self._whole_pattern_art == ord(character)))
       if not pos: raise RuntimeError(
           '{} found no instances of {} in the pattern art used to build this '
           'PatternInfo object.'.format(error_name, repr(character)))

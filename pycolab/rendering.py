@@ -21,8 +21,8 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
-
 import numpy as np
+import six
 
 
 class Observation(collections.namedtuple('Observation', ['board', 'layers'])):
@@ -171,7 +171,7 @@ class BaseObservationRenderer(object):
       presented to this `BaseObservationRenderer` since the last call to its
       `clear()` method.
     """
-    for character, layer in self._layers.iteritems():
+    for character, layer in six.iteritems(self._layers):
       np.equal(self._board, ord(character), out=layer)
     return Observation(board=self._board, layers=self._layers)
 
@@ -213,8 +213,14 @@ class ObservationCharacterRepainter(object):
     # Preserve a local reference to the character mapping.
     self._character_mapping = character_mapping
 
-    # Akin to character_mapping, but values are numerical ASCII values.
-    value_mapping = self._DefaultToIdentityAsciiMapping(character_mapping)
+    # We will use an ObservationToArray object to perform the repainting, which
+    # means we will need a mapping where (a) values are numerical ASCII
+    # codepoints instead of characters, and (b) we supply identity mappings for
+    # all ASCII characters not in character_mapping.
+    value_mapping = {chr(x): np.uint8(x) for x in range(128)}
+    value_mapping.update(
+        {k: np.uint8(ord(v)) for k, v in six.iteritems(character_mapping)})
+
     # With that, we construct the infrastructure that can repaint the characters
     # used in the observation board.
     self._board_converter = ObservationToArray(value_mapping)
@@ -262,7 +268,7 @@ class ObservationCharacterRepainter(object):
     # Determine whether we need to (re)allocate the layer storage for this new
     # (possibly differently-shaped) observation. If we do, do it.
     if ((self._layers is None) or
-        (next(self._layers.itervalues()).shape !=
+        (next(six.itervalues(self._layers)).shape !=
          original_observation.board.shape)):
       rows, cols = original_observation.board.shape
       self._layers = {char: np.zeros((rows, cols), dtype=np.bool_)
@@ -273,39 +279,11 @@ class ObservationCharacterRepainter(object):
     board = self._board_converter(original_observation)
 
     # Compute the mask layers from the newly repainted board.
-    for character, layer in self._layers.iteritems():
+    for character, layer in six.iteritems(self._layers):
       np.equal(board, ord(character), out=layer)
 
     # Return the new observation.
     return Observation(board=board, layers=self._layers)
-
-  class _DefaultToIdentityAsciiMapping(dict):
-    """Repainter helper: supplies default identity vals; converts vals to char.
-
-    `ObservationCharacterRepainter` is based on `ObservationToArray`, which
-    requires all of the values found in an observation to have an entry in
-    its `value_mapping` argument. We don't want users to have to bother with
-    that, nor do we want users to have to supply ASCII values instead of
-    character strings for the mapping.
-
-    So, this subclass overrides dict's `[]` operator to do two things. For
-    values that are present in the dict, which are assumed to be ASCII character
-    strings, it converts them to ASCII numerical codes. For keys that have no
-    value in the dict, it simply returns the key's ASCII code. In this way, any
-    character that could be in an observation maps to a value.
-
-    This subclass is not a "proper" subclass of dict (like e.g. `defaultdict`
-    is), but it overrides enough to work for `ObservationToArray`.
-    """
-
-    def __getitem__(self, char):
-      if char not in self: return ord(char)
-      my_class = ObservationCharacterRepainter._DefaultToIdentityAsciiMapping  # pylint: disable=protected-access
-      return np.uint8(ord(super(my_class, self).__getitem__(char)))
-
-    def itervalues(self):
-      my_class = ObservationCharacterRepainter._DefaultToIdentityAsciiMapping  # pylint: disable=protected-access
-      return (np.uint8(ord(c)) for c in super(my_class, self).itervalues())
 
 
 class ObservationToArray(object):
@@ -357,13 +335,13 @@ class ObservationToArray(object):
 
     # Attempt to infer a dtype for self._array if none is specified.
     self._dtype = (dtype if dtype is not None else
-                   np.array(next(value_mapping.itervalues())).dtype)
+                   np.array(next(six.itervalues(value_mapping))).dtype)
 
     # Will we create a 2-D or a 3-D array? Only 3-D if the values in the mapping
     # can be an argument to `len()`; if so, that's also the depth of our
     # 3-D array.
     try:
-      self._depth = len(next(value_mapping.itervalues()))
+      self._depth = len(next(six.itervalues(value_mapping)))
       self._is_3d = True
     except TypeError:
       self._depth = 1  # Again, the array is always 3-D behind the scenes.

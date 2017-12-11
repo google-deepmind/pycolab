@@ -24,7 +24,8 @@ experience on most UNIX-compatible systems:
 If that didn't work, you may need to obtain the following software packages that
 pycolab depends on:
 
-  1. Python 2.7. We've had success with 2.7.6; other versions may work.
+  1. Python 2.7, or Python 3.4 and up. We've had success with 2.7.6, 3.4.3, and
+     3.6.3; other versions may work.
   2. Numpy. Our version is 1.13.3, but 1.9 seems to have the necessary features.
   3. Scipy, but only for running one of the examples. We have 0.13.3.
 

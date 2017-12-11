@@ -28,14 +28,14 @@ from __future__ import division
 from __future__ import print_function
 
 import curses
-import numpy as np
-from scipy import ndimage
 import sys
 
+import numpy as np
 from pycolab import ascii_art
 from pycolab import human_ui
 from pycolab import things as plab_things
 from pycolab.prefab_parts import sprites as prefab_sprites
+from scipy import ndimage
 
 
 # Just one level for now.
@@ -91,7 +91,7 @@ def random_level(height=12, width=12, safety_density=0.15):
   level[-1, np.random.randint(0, width - 1)] = 'P'
   # Add the safe zone.
   level[0] = '^'
-  return level.tolist()
+  return [row.tostring() for row in level]
 
 
 class PlayerSprite(prefab_sprites.MazeWalker):

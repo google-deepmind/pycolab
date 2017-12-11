@@ -25,6 +25,8 @@ import textwrap
 
 from pycolab.protocols import logging as plab_logging
 
+import six
+
 
 class CursesUi(object):
   """A terminal-based UI for pycolab games."""
@@ -121,7 +123,7 @@ class CursesUi(object):
     try:
       self._keycodes_to_actions = {
           ord(key) if isinstance(key, str) else key: action
-          for key, action in keys_to_actions.iteritems()}
+          for key, action in six.iteritems(keys_to_actions)}
     except TypeError:
       raise TypeError('keys in the keys_to_actions argument must either be '
                       'numerical keycodes or single ASCII character strings.')
@@ -131,11 +133,15 @@ class CursesUi(object):
     # that. So, the reserved key check happens in _init_curses_and_play.
 
     # Save colour mappings and other parameters from the user. Note injection
-    # of defaults.
+    # of defaults and the conversion of character keys to ASCII codepoints.
     self._delay = delay
     self._repainter = repainter
-    self._colour_fg = colour_fg if colour_fg is not None else {}
-    self._colour_bg = colour_bg if colour_bg is not None else self._colour_fg
+    self._colour_fg = (
+        {ord(char): colour for char, colour in six.iteritems(colour_fg)}
+        if colour_fg is not None else {})
+    self._colour_bg = (
+        {ord(char): colour for char, colour in six.iteritems(colour_bg)}
+        if colour_bg is not None else self._colour_fg)
 
     # This slot will hold a mapping from characters to the curses colour pair
     # we'll use when we're displaying that character. None for now, since we
@@ -192,7 +198,7 @@ class CursesUi(object):
     # See whether the user is using any reserved keys. This check ought to be in
     # the constructor, but it can't run until curses is actually initialised, so
     # it's here instead.
-    for key, action in self._keycodes_to_actions.iteritems():
+    for key, action in six.iteritems(self._keycodes_to_actions):
       if key in (curses.KEY_PPAGE, curses.KEY_NPAGE):
         raise ValueError(
             'the keys_to_actions argument to the CursesUi constructor binds '
@@ -277,17 +283,13 @@ class CursesUi(object):
     screen.addstr(0, 2, _format_timedelta(elapsed), curses.color_pair(0))
     screen.addstr(0, 20, 'Score: {}'.format(score), curses.color_pair(0))
 
-    # Reinterpret the game board as a vector of strings whose length are the
-    # width of the board.
-    board = observation.board
-    board = board.view(dtype='|S{}'.format(board.shape[1])).flatten()
-
     # Display game board rows one-by-one.
-    for row, board_line in enumerate(board, start=1):
+    for row, board_line in enumerate(observation.board, start=1):
       screen.move(row, 0)  # Move to start of this board row.
-      # Display game board characters one-by-one.
-      for character in board_line:
-        screen.addch(character, curses.color_pair(self._colour_pair[character]))
+      # Display game board characters one-by-one. We iterate over characters as
+      # integer ASCII codepoints for easiest compatibility with python2/python3.
+      for codepoint in six.iterbytes(board_line.tostring()):
+        screen.addch(codepoint, curses.color_pair(self._colour_pair[codepoint]))
 
     # Redraw the game screen (but in the curses memory buffer only).
     screen.noutrefresh()
@@ -355,8 +357,8 @@ class CursesUi(object):
     # plus the two default colours, plus the largest colour id (which we seem
     # not to be able to assign, at least not with xterm-256color) stick with
     # boring old white on black.
-    colours = set(self._colour_fg.itervalues()).union(
-        self._colour_bg.itervalues())
+    colours = set(six.itervalues(self._colour_fg)).union(
+        six.itervalues(self._colour_bg))
     if (curses.COLORS - 2) < len(colours): return
 
     # Get all unique characters that have a foreground and/or background colour.
@@ -376,7 +378,7 @@ class CursesUi(object):
     colour_ids = dict(zip(colours, ids))
 
     # Program these colours into curses.
-    for colour, cid in colour_ids.iteritems():
+    for colour, cid in six.iteritems(colour_ids):
       curses.init_color(cid, *colour)
 
     # Now add the default colours to the colour-to-ID map.
@@ -392,7 +394,7 @@ class CursesUi(object):
         {character: pid for pid, character in enumerate(characters, start=1)})
 
     # Program these color pairs into curses, and that's all there is to do.
-    for character, pid in self._colour_pair.iteritems():
+    for character, pid in six.iteritems(self._colour_pair):
       # Get foreground and background colours for this character. Note how in
       # the absence of a specified background colour, the same colour as the
       # foreground is used.

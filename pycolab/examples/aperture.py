@@ -34,13 +34,14 @@ from __future__ import division
 from __future__ import print_function
 
 import curses
-
 import sys
 
 from pycolab import ascii_art
 from pycolab import human_ui
 from pycolab import things as plab_things
 from pycolab.prefab_parts import sprites as prefab_sprites
+
+from six.moves import xrange  # pylint: disable=redefined-builtin
 
 
 LEVELS = [
@@ -201,7 +202,7 @@ class ApertureDrape(plab_things.Drape):
         # Hit special wall, create an aperture.
         self._apertures = self._apertures[1:] + [(cur_y, cur_x)]
         self.curtain.fill(False)
-        for aperture in self.apertures:  # note use of None-filtered aperture set.
+        for aperture in self.apertures:  # note use of None-filtered set.
           self.curtain[aperture] = True
         break
 
