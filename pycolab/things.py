@@ -92,7 +92,7 @@ class Backdrop(object):
           will be "owned" by this `Backdrop` and made accessible at
           `self.palette`, but you may wish to abbreviate it in your methods
           (`p = self.palette`). Finally, note that if a character appears not
-          to exist as an property or dict entry in the palette, it's not legal
+          to exist as a property or dict entry in the palette, it's not legal
           for you to use. (No peeking at an ASCII chart to get around this!)
     """
     # Direct access is highly discouraged. Use the properties instead.
