@@ -290,15 +290,23 @@ def ascii_art_to_uint8_nparray(art):
     A 2-D numpy array as described.
 
   Raises:
-    ValueError: `art` wasn't an ASCII art diagram, as described.
+    ValueError: `art` wasn't an ASCII art diagram, as described; this could be
+      because the strings it is made of contain non-ASCII characters, or do not
+      have constant length.
+    TypeError: `art` was not a list of strings.
   """
   error_text = (
       'the argument to ascii_art_to_uint8_nparray must be a list (or tuple) '
       'of strings containing the same number of strictly-ASCII characters.')
   try:
     art = np.vstack(np.fromstring(line, dtype=np.uint8) for line in art)
-  except ValueError:
-    raise ValueError(error_text)
+  except ValueError as e:
+    raise ValueError('{} (original error from numpy: {})'.format(error_text, e))
+  except TypeError as e:
+    if isinstance(art, (list, tuple)) and not all(
+        isinstance(row, six.string_types) for row in art):
+      error_text += ' Did you pass a list of list of single characters?'
+    raise TypeError('{} (original error from numpy: {})'.format(error_text, e))
   if np.any(art > 127): raise ValueError(error_text)
   return art
 
