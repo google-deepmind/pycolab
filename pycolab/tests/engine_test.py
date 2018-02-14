@@ -86,6 +86,14 @@ class EngineTest(tt.PycolabTestCase):
     self.assertBoard(observation.board, art, err_msg='obs @ 0')
     self.assertEqual(discount, 1.0)
 
+    # Check that miscellaneous properties work.
+    self.assertEqual(engine.rows, 3)
+    self.assertEqual(engine.cols, 5)
+    self.assertEqual(engine.z_order, ['Z', 'a', 'b', 'c', 'd', 'e'])
+    self.assertSetEqual(set(engine.things.keys()),
+                        {'a', 'b', 'c', 'd', 'e', 'Z'})
+    self.assertIn('.', engine.backdrop.palette)
+
     ### GAME ITERATION #1. All sprites take a step to the right. As the
     ### update sweep takes place, the segmented update schedule causes
     ### different entities to see the board in different configurations.

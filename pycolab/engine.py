@@ -257,6 +257,7 @@ class Engine(object):
       TypeError: if `backdrop_class` is not a `Backdrop` subclass.
       ValueError: if `characters` are not ASCII characters.
     """
+    self._runtime_error_if_called_during_showtime('set_backdrop')
     return self.set_prefilled_backdrop(
         characters, np.zeros((self._rows, self._cols), dtype=np.uint8),
         backdrop_class, *args, **kwargs)
@@ -297,7 +298,7 @@ class Engine(object):
       TypeError: if `backdrop_class` is not a `Backdrop` subclass.
       ValueError: if `characters` are not ASCII characters.
     """
-    self._runtime_error_if_called_during_showtime('set_backdrop')
+    self._runtime_error_if_called_during_showtime('set_prefilled_backdrop')
     self._value_error_if_characters_are_bad(characters)
     self._runtime_error_if_characters_claimed_already(characters)
     if self._backdrop:
@@ -346,6 +347,7 @@ class Engine(object):
       TypeError: if `drape_class` is not a `Drape` subclass.
       ValueError: if `character` is not a single ASCII character.
     """
+    self._runtime_error_if_called_during_showtime('add_drape')
     return self.add_prefilled_drape(
         character, np.zeros((self._rows, self._cols), dtype=np.bool_),
         drape_class, *args, **kwargs)
@@ -378,7 +380,7 @@ class Engine(object):
       TypeError: if `drape_class` is not a `Drape` subclass.
       ValueError: if `character` is not a single ASCII character.
     """
-    self._runtime_error_if_called_during_showtime('add')
+    self._runtime_error_if_called_during_showtime('add_prefilled_drape')
     self._value_error_if_characters_are_bad(character, mandatory_len=1)
     self._runtime_error_if_characters_claimed_already(character)
     if not issubclass(drape_class, things.Drape):
@@ -427,7 +429,7 @@ class Engine(object):
       ValueError: if `character` is not a single ASCII character, or if
           `position` is not a valid game board coordinate.
     """
-    self._runtime_error_if_called_during_showtime('add')
+    self._runtime_error_if_called_during_showtime('add_sprite')
     self._value_error_if_characters_are_bad(character, mandatory_len=1)
     self._runtime_error_if_characters_claimed_already(character)
     if not issubclass(sprite_class, things.Sprite):
@@ -487,7 +489,7 @@ class Engine(object):
           set of characters corresponding to all `Sprite`s and `Drape`s
           registered with this `Engine`.
     """
-    self._runtime_error_if_called_during_showtime('update_group')
+    self._runtime_error_if_called_during_showtime('set_z_order')
     if (set(z_order) != set(self._sprites_and_drapes.keys()) or
         len(z_order) != len(self._sprites_and_drapes)):
       raise ValueError('The z_order argument {} to Engine.set_z_order is not a '
@@ -631,6 +633,45 @@ class Engine(object):
   @property
   def game_over(self):
     return self._game_over
+
+  @property
+  def z_order(self):
+    """Obtain a copy of the game's current z-order."""
+    return list(self._sprites_and_drapes.keys())
+
+  ### Abstraction breakers ###
+
+  @property
+  def backdrop(self):
+    """Obtain the `Engine`'s `Backdrop`.
+
+    Most pycolab applications don't need to access individual game entities, so
+    using this accessor may signal that your design challenges some abstraction
+    conventions. The canonical way to communicate with entities, for example, is
+    through messages in the Plot. Still, the final choice is yours. We recommend
+    you limit yourself to read-only interactions with the returned `Backdrop`.
+
+    Returns:
+      The `Engine`'s `Backdrop` object.
+    """
+    return self._backdrop
+
+  @property
+  def things(self):
+    """Obtain the `Engine`'s `Sprite`s and `Drape`s.
+
+    Most pycolab applications don't need to access individual game entities, so
+    using this accessor may signal that your design challenges some abstraction
+    conventions. The canonical way to communicate with entities, for example, is
+    through messages in the Plot. Still, the final choice is yours. We recommend
+    you limit yourself to read-only interactions with the returned `Sprite`s and
+    `Drape`s.
+
+    Returns:
+      A dict mapping ASCII characters to the `Sprite` and `Drape` entities that
+          paint those characters onto the game board.
+    """
+    return {k: t for k, t in six.iteritems(self._sprites_and_drapes)}
 
   ### Private helpers ###
 
