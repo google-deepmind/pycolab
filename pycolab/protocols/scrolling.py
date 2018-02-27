@@ -16,6 +16,16 @@
 
 """Routines for pycolab game entities to discuss game board scrolling.
 
+*Note: the scrolling mechanism that this module facilitates is only one way to
+achieve scrolling behaviour in pycolab... and it happens to be one of the more
+complicated ways. If you just want to scroll around a finite map, consider using
+a mechanism like `ScrollingCropper` in `croppers.py`, which moves a tracking
+window around the observation emitted by the game engine, and so doesn't require
+game entities to think about or even know that scrolling is underway. (See
+`examples/better_scrolly_maze.py` for a usage example.) You may still need the
+scrolling protocol in some cases -- e.g. if you have a generated "infinite"
+map -- in which case, buckle in and read on...*
+
 Plenty of cool video games are scrolling video games (think Zelda, Defender,
 Super Mario Bros.), and pycolab should be able to scroll, too. The only problem
 is that with different objects putting all kinds of scenery all over the game

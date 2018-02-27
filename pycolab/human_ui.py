@@ -19,10 +19,12 @@ from __future__ import division
 from __future__ import print_function
 
 import collections
+import copy
 import curses
 import datetime
 import textwrap
 
+from pycolab import cropping
 from pycolab.protocols import logging as plab_logging
 
 import six
@@ -33,7 +35,8 @@ class CursesUi(object):
 
   def __init__(self,
                keys_to_actions, delay=None,
-               repainter=None, colour_fg=None, colour_bg=None):
+               repainter=None, colour_fg=None, colour_bg=None,
+               croppers=None):
     """Construct and configure a `CursesUi` for pycolab games.
 
     A `CursesUi` object can be used over and over again to play any number of
@@ -102,6 +105,13 @@ class CursesUi(object):
           If unspecified, the same colours specified by `colour_fg` (or its
           defaults) are used instead (so characters basically become tall
           rectangular pixels).
+      croppers: None, or a list of `cropping.ObservationCropper` instances
+          and/or None values. If a list of `ObservationCropper`s, each cropper
+          in the list will make its own crop of the observation, and the cropped
+          observations will all be shown side-by-side. A None value in the list
+          means observations returned by the pycolab game supplied to the `play`
+          method should be shown directly instead of cropped. A single None
+          value for this argument is a shorthand for `[None]`.
 
     Raises:
       TypeError: if any key in the `keys_to_actions` dict is neither a numerical
@@ -148,6 +158,20 @@ class CursesUi(object):
     # can't set it up until curses is running.
     self._colour_pair = None
 
+    # If the user specified no croppers or any None croppers, replace them with
+    # pass-through croppers that don't do any cropping.
+    if croppers is None:
+      self._croppers = [cropping.ObservationCropper()]
+    else:
+      self._croppers = croppers
+
+    try:
+      self._croppers = tuple(cropping.ObservationCropper() if c is None else c
+                             for c in self._croppers)
+    except TypeError:
+      raise TypeError('The croppers argument to the CursesUi constructor must '
+                      'be a sequence or None, not a "bare" object.')
+
   def play(self, game):
     """Play a pycolab game.
 
@@ -168,6 +192,9 @@ class CursesUi(object):
       raise RuntimeError('CursesUi is not at all thread safe')
     self._game = game
     self._start_time = datetime.datetime.now()
+    # Inform the croppers which game we're playing.
+    for cropper in self._croppers:
+      cropper.set_engine(self._game)
 
     # After turning on curses, set it up and play the game.
     curses.wrapper(self._init_curses_and_play)
@@ -222,13 +249,28 @@ class CursesUi(object):
     # By default, the log display window is hidden
     paint_console = False
 
-    # Kick off the game---get first observation, repaint it if desired,
+    def crop_and_repaint(observation):
+      # Helper for game display: applies all croppers to the observation, then
+      # repaints the cropped subwindows. Since the same repainter is used for
+      # all subwindows, and since repainters "own" what they return and are
+      # allowed to overwrite it, we copy repainted observations when we have
+      # multiple subwindows.
+      observations = [cropper.crop(observation) for cropper in self._croppers]
+      if self._repainter:
+        if len(observations) == 1:
+          return [self._repainter(observations[0])]
+        else:
+          return [copy.deepcopy(self._repainter(obs)) for obs in observations]
+      else:
+        return observations
+
+    # Kick off the game---get first observation, crop and repaint as needed,
     # initialise our total return, and display the first frame.
     observation, reward, _ = self._game.its_showtime()
-    if self._repainter: observation = self._repainter(observation)
+    observations = crop_and_repaint(observation)
     self._total_return = reward
     self._display(
-        screen, observation, self._total_return, elapsed=datetime.timedelta())
+        screen, observations, self._total_return, elapsed=datetime.timedelta())
 
     # Oh boy, play the game!
     while not self._game.game_over:
@@ -245,10 +287,11 @@ class CursesUi(object):
         paint_console = False
       elif keycode in self._keycodes_to_actions:
         # Convert the keycode to a game action and send that to the engine.
-        # Receive a new observation, reward, discount; update total return.
+        # Receive a new observation, reward, discount; crop and repaint; update
+        # total return.
         action = self._keycodes_to_actions[keycode]
         observation, reward, _ = self._game.play(action)
-        if self._repainter: observation = self._repainter(observation)
+        observations = crop_and_repaint(observation)
         if self._total_return is None:
           self._total_return = reward
         elif reward is not None:
@@ -257,7 +300,7 @@ class CursesUi(object):
       # Update the game display, regardless of whether we've called the game's
       # play() method.
       elapsed = datetime.datetime.now() - self._start_time
-      self._display(screen, observation, self._total_return, elapsed)
+      self._display(screen, observations, self._total_return, elapsed)
 
       # Update game console message buffer with new messages from the game.
       self._update_game_console(
@@ -266,13 +309,13 @@ class CursesUi(object):
       # Show the screen to the user.
       curses.doupdate()
 
-  def _display(self, screen, observation, score, elapsed):
+  def _display(self, screen, observations, score, elapsed):
     """Redraw the game board onto the screen, with elapsed time and score.
 
     Args:
       screen: the main, full-screen curses window.
-      observation: a `rendering.Observation` object containing the current
-          game board.
+      observations: a list of `rendering.Observation` objects containing
+          subwindows of the current game board.
       score: the total return earned by the player, up until now.
       elapsed: a `datetime.timedelta` with the total time the player has spent
           playing this game.
@@ -283,13 +326,20 @@ class CursesUi(object):
     screen.addstr(0, 2, _format_timedelta(elapsed), curses.color_pair(0))
     screen.addstr(0, 20, 'Score: {}'.format(score), curses.color_pair(0))
 
-    # Display game board rows one-by-one.
-    for row, board_line in enumerate(observation.board, start=1):
-      screen.move(row, 0)  # Move to start of this board row.
-      # Display game board characters one-by-one. We iterate over characters as
-      # integer ASCII codepoints for easiest compatibility with python2/python3.
-      for codepoint in six.iterbytes(board_line.tostring()):
-        screen.addch(codepoint, curses.color_pair(self._colour_pair[codepoint]))
+    # Display cropped observations side-by-side.
+    leftmost_column = 0
+    for observation in observations:
+      # Display game board rows one-by-one.
+      for row, board_line in enumerate(observation.board, start=1):
+        screen.move(row, leftmost_column)  # Move to start of this board row.
+        # Display game board characters one-by-one. We iterate over them as
+        # integer ASCII codepoints for easiest compatibility with python2/3.
+        for codepoint in six.iterbytes(board_line.tostring()):
+          screen.addch(
+              codepoint, curses.color_pair(self._colour_pair[codepoint]))
+
+      # Advance the leftmost column for the next observation.
+      leftmost_column += observation.board.shape[1] + 3
 
     # Redraw the game screen (but in the curses memory buffer only).
     screen.noutrefresh()

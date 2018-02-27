@@ -30,6 +30,14 @@ from pycolab.protocols import scrolling
 class Scrolly(things.Drape):
   """A base class for scrolling `Drape`s, which usually implement game scenery.
 
+  *Note: This `Drape` subclass is mostly intended for games that implement
+  scrolling by having their game entities participate in the scrolling protocol
+  (see `protocols/scrolling.py`). If your game doesn't do any scrolling, or if
+  it is a game with a finite map where scrolling is more easily accomplished
+  using a `ScrollingCropper` (which just slides a moving window over the
+  observations produced by a pycolab game, giving the illusion of scrolling),
+  you probably don't need the added complication of using a `Scrolly`.*
+
   If your game shows a top-down view of a world that can "scroll" around a
   character as the character moves around inside of it (e.g. River Raid) then a
   `Scrolly` is a `Drape` that contains much of the functionality that you need

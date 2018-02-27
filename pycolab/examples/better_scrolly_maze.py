@@ -14,15 +14,24 @@
 
 """A scrolling maze to explore. Collect all of the coins!
 
-The scrolling mechanism used by this example is a bit old-fashioned. For a
-recommended simpler, more modern approach to scrolling in games with finite
-worlds, have a look at `better_scrolly_maze.py`. On the other hand, if you have
-a game with an "infinite" map (for example, a maze that generates itself "on
-the fly" as the agent walks through it), then a mechanism using the scrolling
-protocol (as the game entities in this game do) is worth investigating.
+Better Scrolly Maze is better than Scrolly Maze because it uses a much simpler
+scrolling mechanism: cropping! As far as the pycolab engine is concerned, the
+game world doesn't scroll at all: it just renders observations that are the size
+of the entire map. Only later do "cropper" objects crop out a part of the
+observation to give the impression of a moving world.
 
-Command-line usage: `scrolly_maze.py <level>`, where `<level>` is an optional
-integer argument selecting Scrolly Maze levels 0, 1, or 2.
+This cropping mechanism also makes it easier to derive multiple observations
+from the same game, so the human user interface shows three views of the map at
+once: a moving view that follows the player, another one that follows the
+Patroller Sprite identified by the 'c' character, and a third that remains fixed
+on a tantalisingly large hoard of gold coins, tempting the player to explore.
+
+Regrettably, the cropper approach does mean that we have to give up the cool
+starfield floating behind the map in Scrolly Maze. If you like the starfield a
+lot, then Better Scrolly Maze isn't actually better.
+
+Command-line usage: `better_scrolly_maze.py <level>`, where `<level>` is an
+optional integer argument selecting Better Scrolly Maze levels 0, 1, or 2.
 
 Keys: up, down, left, right - move. q - quit.
 """
@@ -36,8 +45,9 @@ import curses
 import sys
 
 from pycolab import ascii_art
+from pycolab import cropping
 from pycolab import human_ui
-from pycolab.prefab_parts import drapes as prefab_drapes
+from pycolab import things as plab_things
 from pycolab.prefab_parts import sprites as prefab_sprites
 
 
@@ -53,12 +63,10 @@ MAZES_ART = [
     #     '#': impassable walls.            'a': patroller A.
     #     '@': collectable coins.           'b': patroller B.
     #     'P': player starting location.    'c': patroller C.
-    #     ' ': boring old maze floor.       '+': initial board top-left corner.
+    #     ' ': boring old maze floor.
     #
-    # Don't forget to specify the initial board scrolling position with '+', and
-    # take care that it won't cause the board to extend beyond the maze.
-    # Remember also to update the MAZES_WHAT_LIES_BENEATH array whenever you add
-    # a new maze.
+    # Finally, don't forget to update INITIAL_OFFSET and TEASER_CORNER if you
+    # add or make substantial changes to a level.
 
     # Maze #0:
     ['#########################################################################################',
@@ -81,7 +89,7 @@ MAZES_ART = [
      '#     @ #   #       #       #           #   #       #   #   #           #   #   @   # @ #',
      '#########   #############   #   #####   #   #   #####   #   #########   #   #   #####   #',
      '#       #   #           #   #       #   #   # @ #           #       #   #     @ # @     #',
-     '#   #   #############   #   ###+#####   #   #   #   #########   #   #   #   #   ##### @ #',
+     '#   #   #############   #   #########   #   #   #   #########   #   #   #   #   ##### @ #',
      '#   #           #       # b                 #   #   #       #   #       #   #   @   #   #',
      '#   #########   #   #########   #   #   #####   #   #   #####   #####   #   #####   #   #',
      '#   #   #     @ #               # P #           #   #           #       #       # @ # @ #',
@@ -127,7 +135,7 @@ MAZES_ART = [
      '#   @   @   @   @   @   @    #',
      '#    @   @   @   @   @   @   #',
      '#                            #',
-     '+######       c        #######',
+     '#######       c        #######',
      '#                            #',
      '#   @   @   @   @   @   @    #',
      '#    @   @   @   @   @   @   #',
@@ -139,7 +147,7 @@ MAZES_ART = [
      '##############################'],
 
     # Maze #2
-    ['                              +                                                          ',
+    ['                                                                                         ',
      '   ###################################################################################   ',
      '   #  @  @  @  @  @  @  @  @  @  @           P                                       #   ',
      '   #   ###########################################################################   #   ',
@@ -172,89 +180,80 @@ MAZES_ART = [
 # pylint: enable=line-too-long
 
 
-MAZES_WHAT_LIES_BENEATH = [
-    # What lies below '+' characters in MAZES_ART?
-    # Unlike the what_lies_beneath argument to ascii_art_to_game, only single
-    # characters are supported here for the time being.
+# The "teaser observations" (see docstring) have their top-left corners at these
+# row, column maze locations. (The teaser window is 12 rows by 20 columns.)
+TEASER_CORNER = [(3, 9),    # For level 0
+                 (4, 5),    # For level 1
+                 (16, 53)]  # For level 2
 
-    '#',  # Maze #0
-    '#',  # Maze #1
-    ' ',  # Maze #2
-]
-
-
-STAR_ART = ['  .           .          .    ',
-            '         .       .        .   ',
-            '        .          .         .',
-            '  .    .    .           .     ',
-            '.           .          .   . .',
-            '         .         .         .',
-            '   .                 .        ',
-            '           . .          .     ',
-            '    .            .          . ',
-            '  .      .              .  .  ']
+# For dramatic effect, none of the levels start the game with the first
+# observation centred on the player; instead, the view in the window is shifted
+# such that the player is this many rows, columns away from the centre.
+STARTER_OFFSET = [(-2, -12),  # For level 0
+                  (10, 0),    # For level 1
+                  (-3, 0)]    # For level 2
 
 
 # These colours are only for humans to see in the CursesUi.
-COLOUR_FG = {' ': (0, 0, 0),        # Inky blackness of SPAAAACE
-             '.': (949, 929, 999),  # These stars are full of lithium
+COLOUR_FG = {' ': (0, 0, 0),        # Default black background
              '@': (999, 862, 110),  # Shimmering golden coins
-             '#': (764, 0, 999),    # Walls of the SPACE MAZE
+             '#': (764, 0, 999),    # Walls of the maze
              'P': (0, 999, 999),    # This is you, the player
              'a': (999, 0, 780),    # Patroller A
              'b': (145, 987, 341),  # Patroller B
              'c': (987, 623, 145)}  # Patroller C
 
-COLOUR_BG = {'.': (0, 0, 0),        # Around the stars, inky blackness etc.
-             '@': (0, 0, 0)}
+COLOUR_BG = {'@': (0, 0, 0)}  # So the coins look like @ and not solid blocks.
 
 
 def make_game(level):
-  """Builds and returns a Scrolly Maze game for the selected level."""
-  # A helper object that helps us with Scrolly-related setup paperwork.
-  scrolly_info = prefab_drapes.Scrolly.PatternInfo(
-      MAZES_ART[level], STAR_ART,
-      board_northwest_corner_mark='+',
-      what_lies_beneath=MAZES_WHAT_LIES_BENEATH[level])
-
-  walls_kwargs = scrolly_info.kwargs('#')
-  coins_kwargs = scrolly_info.kwargs('@')
-  player_position = scrolly_info.virtual_position('P')
-  patroller_a_position = scrolly_info.virtual_position('a')
-  patroller_b_position = scrolly_info.virtual_position('b')
-  patroller_c_position = scrolly_info.virtual_position('c')
-
+  """Builds and returns a Better Scrolly Maze game for the selected level."""
   return ascii_art.ascii_art_to_game(
-      STAR_ART, what_lies_beneath=' ',
+      MAZES_ART[level], what_lies_beneath=' ',
       sprites={
-          'P': ascii_art.Partial(PlayerSprite, player_position),
-          'a': ascii_art.Partial(PatrollerSprite, patroller_a_position),
-          'b': ascii_art.Partial(PatrollerSprite, patroller_b_position),
-          'c': ascii_art.Partial(PatrollerSprite, patroller_c_position)},
+          'P': PlayerSprite,
+          'a': PatrollerSprite,
+          'b': PatrollerSprite,
+          'c': PatrollerSprite},
       drapes={
-          '#': ascii_art.Partial(MazeDrape, **walls_kwargs),
-          '@': ascii_art.Partial(CashDrape, **coins_kwargs)},
-      # The base Backdrop class will do for a backdrop that just sits there.
-      # In accordance with best practices, the one egocentric MazeWalker (the
-      # player) is in a separate and later update group from all of the
-      # pycolab entities that control non-traversable characters.
-      update_schedule=[['#'], ['a', 'b', 'c', 'P'], ['@']],
-      z_order='abc@#P')
+          '@': CashDrape},
+      update_schedule=['a', 'b', 'c', 'P', '@'],
+      z_order='abc@P')
+
+
+def make_croppers(level):
+  """Builds and returns `ObservationCropper`s for the selected level.
+
+  We make three croppers for each level: one centred on the player, one centred
+  on one of the Patrollers (scary!), and one centred on a tantalising hoard of
+  coins somewhere in the level (motivating!)
+
+  Args:
+    level: level to make `ObservationCropper`s for.
+
+  Returns:
+    a list of three `ObservationCropper`s.
+  """
+  return [
+      # The player view.
+      cropping.ScrollingCropper(rows=10, cols=30, to_track=['P'],
+                                initial_offset=STARTER_OFFSET[level]),
+      # The patroller view.
+      cropping.ScrollingCropper(rows=7, cols=10, to_track=['c'],
+                                pad_char=' ', scroll_margins=(None, 3)),
+      # The teaser!
+      cropping.FixedCropper(top_left_corner=TEASER_CORNER[level],
+                            rows=12, cols=20, pad_char=' '),
+  ]
 
 
 class PlayerSprite(prefab_sprites.MazeWalker):
-  """A `Sprite` for our player, the maze explorer.
+  """A `Sprite` for our player, the maze explorer."""
 
-  This egocentric `Sprite` requires no logic beyond tying actions to
-  `MazeWalker` motion action helper methods, which keep the player from walking
-  on top of obstacles.
-  """
-
-  def __init__(self, corner, position, character, virtual_position):
-    """Constructor: player is egocentric and can't walk through walls."""
+  def __init__(self, corner, position, character):
+    """Constructor: just tells `MazeWalker` we can't walk through walls."""
     super(PlayerSprite, self).__init__(
-        corner, position, character, egocentric_scroller=True, impassable='#')
-    self._teleport(virtual_position)
+        corner, position, character, impassable='#')
 
   def update(self, actions, board, layers, backdrop, things, the_plot):
     del backdrop, things, layers  # Unused
@@ -267,106 +266,67 @@ class PlayerSprite(prefab_sprites.MazeWalker):
       self._west(board, the_plot)
     elif actions == 3:  # go rightward?
       self._east(board, the_plot)
-    elif actions == 4:  # do nothing?
+    elif actions == 4:  # stay put? (Not strictly necessary.)
       self._stay(board, the_plot)
+    if actions == 5:    # just quit?
+      the_plot.terminate_episode()
 
 
 class PatrollerSprite(prefab_sprites.MazeWalker):
   """Wanders back and forth horizontally, killing the player on contact."""
 
-  def __init__(self, corner, position, character, virtual_position):
-    """Constructor: changes virtual position to match the argument."""
-    super(PatrollerSprite, self).__init__(corner, position, character, '#')
-    self._teleport(virtual_position)
+  def __init__(self, corner, position, character):
+    """Constructor: list impassables, initialise direction."""
+    super(PatrollerSprite, self).__init__(
+        corner, position, character, impassable='#')
     # Choose our initial direction based on our character value.
     self._moving_east = bool(ord(character) % 2)
 
   def update(self, actions, board, layers, backdrop, things, the_plot):
-    del actions, layers, backdrop  # Unused.
+    del actions, backdrop  # Unused.
 
     # We only move once every two game iterations.
     if the_plot.frame % 2:
-      self._stay(board, the_plot)
+      self._stay(board, the_plot)  # Also not strictly necessary.
       return
 
-    # MazeWalker would make certain that we don't run into a wall, but only
-    # if the sprite and the wall are visible on the game board. So, we have to
-    # look after this ourselves in the general case.
-    pattern_row, pattern_col = things['#'].pattern_position_prescroll(
-        self.virtual_position, the_plot)
-    next_to_wall = things['#'].whole_pattern[
-        pattern_row, pattern_col+(1 if self._moving_east else -1)]
-    if next_to_wall: self._moving_east = not self._moving_east
+    # If there is a wall next to us, we ought to switch direction.
+    row, col = self.position
+    if layers['#'][row, col-1]: self._moving_east = True
+    if layers['#'][row, col+1]: self._moving_east = False
 
     # Make our move. If we're now in the same cell as the player, it's instant
     # game over!
     (self._east if self._moving_east else self._west)(board, the_plot)
-    if self.virtual_position == things['P'].virtual_position:
-      the_plot.terminate_episode()
+    if self.position == things['P'].position: the_plot.terminate_episode()
 
 
-class MazeDrape(prefab_drapes.Scrolly):
-  """A scrolling `Drape` handling the maze scenery.
+class CashDrape(plab_things.Drape):
+  """A `Drape` handling all of the coins.
 
-  This `Drape` requires no logic beyond tying actions to `Scrolly` motion
-  action helper methods. Our job as programmers is to make certain that the
-  actions we use have the same meaning between all `Sprite`s and `Drape`s in
-  the same scrolling group (see `protocols/scrolling.py`).
-  """
-
-  def update(self, actions, board, layers, backdrop, things, the_plot):
-    del backdrop, things, layers  # Unused
-
-    if actions == 0:    # is the player going upward?
-      self._north(the_plot)
-    elif actions == 1:  # is the player going downward?
-      self._south(the_plot)
-    elif actions == 2:  # is the player going leftward?
-      self._west(the_plot)
-    elif actions == 3:  # is the player going rightward?
-      self._east(the_plot)
-    elif actions == 4:  # is the player doing nothing?
-      self._stay(the_plot)
-
-
-class CashDrape(prefab_drapes.Scrolly):
-  """A scrolling `Drape` handling all of the coins.
-
-  This `Drape` ties actions to `Scrolly` motion action helper methods, and once
-  again we take care to map the same actions to the same methods. A little
-  extra logic updates the scrolling pattern for when the player touches the
-  coin, credits reward, and handles game termination.
+  This Drape detects when a player traverses a coin, removing the coin and
+  crediting the player for the collection. Terminates if all coins are gone.
   """
 
   def update(self, actions, board, layers, backdrop, things, the_plot):
     # If the player has reached a coin, credit one reward and remove the coin
     # from the scrolling pattern. If the player has obtained all coins, quit!
-    player_pattern_position = self.pattern_position_prescroll(
-        things['P'].position, the_plot)
+    player_pattern_position = things['P'].position
 
-    if self.whole_pattern[player_pattern_position]:
+    if self.curtain[player_pattern_position]:
       the_plot.log('Coin collected at {}!'.format(player_pattern_position))
       the_plot.add_reward(100)
-      self.whole_pattern[player_pattern_position] = False
-      if not self.whole_pattern.any(): the_plot.terminate_episode()
-
-    if actions == 0:    # is the player going upward?
-      self._north(the_plot)
-    elif actions == 1:  # is the player going downward?
-      self._south(the_plot)
-    elif actions == 2:  # is the player going leftward?
-      self._west(the_plot)
-    elif actions == 3:  # is the player going rightward?
-      self._east(the_plot)
-    elif actions == 4:  # is the player doing nothing?
-      self._stay(the_plot)
-    elif actions == 5:  # does the player want to quit?
-      the_plot.terminate_episode()
+      self.curtain[player_pattern_position] = False
+      if not self.curtain.any(): the_plot.terminate_episode()
 
 
 def main(argv=()):
-  # Build a Scrolly Maze game.
-  game = make_game(int(argv[1]) if len(argv) > 1 else 0)
+  level = int(argv[1]) if len(argv) > 1 else 0
+
+  # Build a Better Scrolly Maze game.
+  game = make_game(level)
+  # Build the croppers we'll use to scroll around in it, etc.
+  croppers = make_croppers(level)
 
   # Make a CursesUi to play it with.
   ui = human_ui.CursesUi(
@@ -374,7 +334,8 @@ def main(argv=()):
                        curses.KEY_LEFT: 2, curses.KEY_RIGHT: 3,
                        -1: 4,
                        'q': 5, 'Q': 5},
-      delay=100, colour_fg=COLOUR_FG, colour_bg=COLOUR_BG)
+      delay=100, colour_fg=COLOUR_FG, colour_bg=COLOUR_BG,
+      croppers=croppers)
 
   # Let the game begin!
   ui.play(game)

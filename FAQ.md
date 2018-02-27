@@ -47,3 +47,28 @@ at A's curtain directly through the `things` argument to `update`:
 `things['A'].curtain`. Note that this will only work for Drapes; Sprites don't
 express a curtain, only a (row, column) screen position under the `position`
 attribute. Hopefully this will be useful for locating an occluded sprite.
+
+### 3. What are the ways to get a game with top-down scrolling?
+
+There are two "official" ways to do top-down, egocentric scrolling (where the
+world appears to move around the player as they walk through it).
+
+If you have a world with a fixed-size, finite map, the easiest way is to program
+a pycolab game that renders the entire world as one giant observation, then to
+"crop" out a smaller observation centered on the player from each observation
+returned by `play()`. As the player moves, the cropped observation will follow
+along, giving the impression of scrolling. The `cropping` module provides some
+utility classes for this approach; the `better_scrolly_maze.py` and
+`tennnnnnnnnnnnnnnnnnnnnnnnis.py` examples show these classes in use.
+
+If you have a world with an "infinite-ish" map (for example, a game where the
+scenery generates itself just-in-time as the player moves through it), or any
+world where it would be impractical to render the entire world into one big
+observation, one alternative approach has the game entities communicate with
+each other about scrolling (e.g. "the game should scroll one row downward now")
+and then update their own appearances to match. This approach is much more
+complicated than the cropping technique, but also more flexible. The scrolling
+protocol module (`protocols/scrolling.py`) provides utilities for game entities
+to talk about scrolling through the Plot object; the `MazeWalker` Sprite and
+`Scrolly` Drape in the `prefab_parts/` modules work with the scrolling protocol
+out of the box; and the `scrolly_maze.py` example demonstrates this approach.

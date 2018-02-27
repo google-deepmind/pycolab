@@ -193,8 +193,9 @@ class Plot(dict):
     This value need not be a number, but can be any kind of value appropriate to
     the game.  If there's ever any chance that more than one `Sprite`, `Drape`,
     or `Backdrop` would supply a reward during a game iteration, the value
-    should probably be of a type that supports the `+` operator in a relevant
-    way, since this method uses addition to accumulate reward.
+    should probably be of a type that supports the `+=` operator in a relevant
+    way, since this method uses addition to accumulate reward. (For custom
+    classes, this typically means implementing the `__iadd__` method.)
 
     If this method is never called during a game iteration, the `Engine` will
     supply None to the player (or players) as the reward.

@@ -53,14 +53,9 @@ of interest:
   5. `prefab_parts/sprites.py`: useful `Sprite` subclasses, including
      `MazeWalker`, a pixel that can walk around but not through walls and
      obstacles.
-  6. `prefab_parts/drapes.py`: useful `Drape` subclasses, including `Scrolly`,
-     a `Drape` that works in tandem with `MazeWalker` to construct a scrolling
-     top-down maze world.
-
-Gluttons for documentation punishment may want to read
-
-  7. `protocols/scrolling.py`: how game components talk to one another about
-     scrolling in particular.
+  6. `cropping.py`: how can I generate the illusion of top-down scrolling by
+     cleverly cropping an observation around a particular moving game element?
+     (This is a common way to build partial observability into a game.)
 
 Don't forget that you can *always read the tests*, too. These can help
 demonstrate by example what all the various components do.
