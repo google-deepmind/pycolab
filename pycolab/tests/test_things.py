@@ -435,6 +435,10 @@ class PycolabTestCase(unittest.TestCase):
         self.assertBoard(observation.board, art,
                          err_msg='Frame {} observation mismatch'.format(i))
       else:
+        # It will be popular to construct iterables of ASCII art using zip (as
+        # shown in cropping_test.py); we graciously convert art to a tuple,
+        # since the result of Python 3's zip does not support len().
+        art = tuple(art)
         if len(art) != len(croppers): raise ValueError(
             'Frame {} in the call to assertMachinima has {} ASCII-art diagrams '
             'for {} croppers. These counts should be the same.'.format(
