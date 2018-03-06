@@ -113,9 +113,9 @@ class BunkerDrape(plab_things.Drape):
   def update(self, actions, board, layers, backdrop, things, the_plot):
     # Where are the laser bolts? Bolts from players or marauders do damage.
     bolts = np.logical_or.reduce([layers[c] for c in _ALL_BOLT_CHARS], axis=0)
-    hits = bolts & self.curtain                    # Any hits to a bunker?
-    np.subtract(self.curtain, hits, self.curtain)  # If so, erode the bunker...
-    the_plot.add_reward(-np.sum(hits))             # ...and impose a penalty.
+    hits = bolts & self.curtain                       # Any hits to a bunker?
+    np.logical_xor(self.curtain, hits, self.curtain)  # If so, erode the bunker...
+    the_plot.add_reward(-np.sum(hits))                # ...and impose a penalty.
     # Save the identities of bunker-striking bolts in the Plot.
     the_plot['bunker_hitters'] = [chr(c) for c in board[hits]]
 
@@ -141,9 +141,9 @@ class MarauderDrape(plab_things.Drape):
   def update(self, actions, board, layers, backdrop, things, the_plot):
     # Where are the laser bolts? Only bolts from the player kill a Marauder.
     bolts = np.logical_or.reduce([layers[c] for c in UPWARD_BOLT_CHARS], axis=0)
-    hits = bolts & self.curtain                    # Any hits to Marauders?
-    np.subtract(self.curtain, hits, self.curtain)  # If so, zap the marauder...
-    the_plot.add_reward(np.sum(hits)*10)           # ...and supply a reward.
+    hits = bolts & self.curtain                       # Any hits to Marauders?
+    np.logical_xor(self.curtain, hits, self.curtain)  # If so, zap the marauder...
+    the_plot.add_reward(np.sum(hits)*10)              # ...and supply a reward.
     # Save the identities of marauder-striking bolts in the Plot.
     the_plot['marauder_hitters'] = [chr(c) for c in board[hits]]
 
