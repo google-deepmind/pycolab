@@ -595,10 +595,10 @@ class EngineTest(tt.PycolabTestCase):
              '..']
 
       # Here we make the game. The sprite `a` will cover a Drape element `b` ,
-      # which covers another Sprite `c`, but we should still be able to see them
-      # in the layers, because `occlusion_in_layers` is set to `False`. In the
-      # flat `board`, occlusion stil occurs and should only see those entities
-      # with higher z-order.
+      # which covers another Sprite `c`. If `occlusion_in_layers` is False, we
+      # should still be able to see them in the layers, otherwise we should not.
+      # In the flat `board`, occlusion stil occurs regardless and we should only
+      # see those entities with higher z-order.
       engine = ascii_art.ascii_art_to_game(
           art=art, what_lies_beneath='.',
           # Note: since a and c do not appear in the game art, these sprites
