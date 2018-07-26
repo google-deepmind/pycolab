@@ -38,7 +38,7 @@ except ImportError:
 
 setuptools.setup(
     name='pycolab',
-    version='1.0',
+    version='1.1',
     description='An engine for small games for reinforcement learning agents.',
     long_description=(
         'A highly-customisable all-Python gridworld game engine with some '

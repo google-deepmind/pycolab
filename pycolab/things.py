@@ -124,13 +124,14 @@ class Backdrop(object):
           the last game iteration; see `Engine` docs for details). Recall that
           Python's `chr` method can turn `uint8` values into single-character
           strings.
-      layers: A feature-map representation of `board` (and so also current to
+      layers: A feature-map representation of all game entities (current to
           the last board repaint); specifically, a dict mapping all characters
-          valid characters that could be found on the board to `bool_` numpy
-          arrays indicating where those characters are found (if
-          anywhere---these can be empty). Note that things that are "occluded"
-          on `board` by overlapping Sprites and Drapes will not be visible in
-          these feature maps, nor will Sprites and Drapes that are invisible.
+          known to the game's `Engine` to `bool_` numpy arrays indicating
+          where those characters are found (if anywhere---these can be empty).
+          Note that if the game's `Engine` was constructed with
+          `occlusion_in_layers=True`, things that are "occluded" on `board` by
+          overlapping Sprites and Drapes will not be visible in these feature
+          maps, nor will Sprites and Drapes that are invisible.
       things: The complete inventory of Sprites and Drapes in this game, as a
           dict keyed by the characters they paint onto the board. These are NOT
           guaranteed to be current to the last repaint; they are current to the
@@ -223,13 +224,14 @@ class Drape(object):
           the last game iteration; see `Engine` docs for details). Recall that
           Python's `chr` method can turn `uint8` values into single-character
           strings.
-      layers: A feature-map representation of `board` (and so also current to
-          the last board repaint); specifically, a dict mapping all
-          valid characters that could be found on the board to `bool_` numpy
-          arrays indicating where those characters are found (if
-          anywhere---these can be empty). Note that things that are "occluded"
-          on `board` by overlapping Sprites and Drapes will not be visible in
-          these feature maps, nor will Sprites and Drapes that are invisible.
+      layers: A feature-map representation of all game entities (current to
+          the last board repaint); specifically, a dict mapping all characters
+          known to the game's `Engine` to `bool_` numpy arrays indicating where
+          those characters are found (if anywhere---these can be empty). Note
+          that if the game's `Engine` was constructed with
+          `occlusion_in_layers=True`, things that are "occluded" on `board` by
+          overlapping Sprites and Drapes will not be visible in these feature
+          maps, nor will Sprites and Drapes that are invisible.
       backdrop: The `Backdrop` for this game. This is NOT guaranteed to be
           current to the last repaint; it is current to the last time it was
           updated, which is dictated by the update ordering specified in this
@@ -343,13 +345,14 @@ class Sprite(object):
           the last game iteration; see `Engine` docs for details). Recall that
           Python's `chr` method can turn `uint8` values into single-character
           strings.
-      layers: A feature-map representation of `board` (and so also current to
+      layers: A feature-map representation of all game entities (current to
           the last board repaint); specifically, a dict mapping all characters
-          valid characters that could be found on the board to `bool_` numpy
-          arrays indicating where those characters are found (if
-          anywhere---these can be empty). Note that things that are "occluded"
-          on `board` by overlapping Sprites and Drapes will not be visible in
-          these feature maps, nor will Sprites and Drapes that are invisible.
+          known to the game's `Engine` to `bool_` numpy arrays indicating
+          where those characters are found (if anywhere---these can be empty).
+          Note that if the game's `Engine` was constructed with
+          `occlusion_in_layers=True`, things that are "occluded" on `board` by
+          overlapping Sprites and Drapes will not be visible in these feature
+          maps, nor will Sprites and Drapes that are invisible.
       backdrop: The `Backdrop` for this game. This is NOT guaranteed to be
           current to the last repaint; it is current to the last time it was
           updated, which is dictated by the update ordering specified in this

@@ -37,12 +37,15 @@ class Observation(collections.namedtuple('Observation', ['board', 'layers'])):
      values are the actual ASCII character values that are arranged on different
      parts of the game board by the `Backdrop` and the `Sprite`s and `Drape`s.
 
-  * `layers`: a dict mapping ASCII characters to a binary mask numpy array
-    showing where the character appears on the game board. When a
-    `BaseObservationRenderer` creates an `Observation`, this dict has an entry
-    for every character that could possibly appear on a game board (that is,
-    according to the configuration of the `Engine`). It is not uncommon for some
-    masks in `layers` to be empty (i.e. all False).
+  * `layers`: a dict mapping every ASCII character that could possibly appear on
+    a game board (that is, according to the configuration of the `Engine`) to
+    binary mask numpy arrays. If the `Engine` was constructed with
+    `occlusion_in_layers=True`, the mask for a character shows only where that
+    character appears in `board`; otherwise, the mask shows all locations where
+    the `Backdrop` or the corresponding `Sprite` or `Drape` place that
+    character, even if some of those locations are covered by other game
+    entities that appear later in the Z-order. It is not uncommon for some masks
+    in `layers` to be empty (i.e. all False).
 
   Here is a quick one-liner for visualising a board (and in python 2.7, you
   don't even need the `.decode('ascii')` part):
@@ -178,6 +181,123 @@ class BaseObservationRenderer(object):
   @property
   def shape(self):
     """The 2-D dimensions of this `BaseObservationRenderer`."""
+    return self._board.shape
+
+
+class BaseUnoccludedObservationRenderer(object):
+  """Renderer of "base" pycolab observations.
+
+  Similar to `BaseObservationRenderer` except that multiple layers can have
+  a `True` value at any given position. This is different from
+  `BaseObservationRenderer` where layers with lower z-ordering can get occluded
+  by higher layers.
+  """
+
+  def __init__(self, rows, cols, characters):
+    """Construct a BaseUnoccludedObservationRenderer.
+
+    Args:
+      rows: height of the game board.
+      cols: width of the game board.
+      characters: an iterable of ASCII characters that are allowed to appear
+          on the game board. (A string will work as an argument here.)
+    """
+    self._board = np.zeros((rows, cols), dtype=np.uint8)
+    self._layers = {
+        char: np.zeros((rows, cols), dtype=np.bool_) for char in characters}
+
+  def clear(self):
+    """Reset the "canvas" of this renderer.
+
+    After a `clear()`, a call to `render()` would return an `Observation` whose
+    `board` contains only `np.uint8(0)` values and whose layers contain only
+    `np.bool_(False)` values.
+    """
+    self._board.fill(0)
+    for layer in six.itervalues(self._layers):
+      layer.fill(False)
+
+  def paint_all_of(self, curtain):
+    """Copy a pattern onto the "canvas" of this renderer.
+
+    Copies all of the characters from `curtain` onto this object's canvas.
+    This method is the usual means by which `Backdrop` data is added to an
+    observation.
+
+    Args:
+      curtain: a 2-D `np.uint8` array whose dimensions are the same as this
+          renderer's.
+    """
+    np.copyto(self._board, curtain, casting='no')
+    for character, layer in six.iteritems(self._layers):
+      np.equal(curtain, ord(character), out=layer)
+
+  def paint_sprite(self, character, position):
+    """Draw a character onto the "canvas" of this renderer.
+
+    Draws `character` at row, column location `position` of this object's
+    canvas. This is the usual means by which a `Sprite` is added to an
+    observation.
+
+    Args:
+      character: a string of length 1 containing an ASCII character.
+      position: a length-2 indexable whose values are the row and column where
+          `character` should be drawn on the canvas.
+
+    Raises:
+      ValueError: `character` is not a valid character for this game, according
+          to the `Engine`'s configuration.
+    """
+    if character not in self._layers:
+      raise ValueError('character {} does not seem to be a valid character for '
+                       'this game'.format(str(character)))
+    position = tuple(position)
+    self._board[position] = ord(character)
+    self._layers[character][position] = True
+
+  def paint_drape(self, character, curtain):
+    """Fill a masked area on the "canvas" of this renderer.
+
+    Places `character` into all non-False locations in the binary mask
+    `curtain`. This is the usual means by which a `Drape` is added to an
+    observation.
+
+    Args:
+      character: a string of length 1 containing an ASCII character.
+      curtain: a 2-D `np.bool_` array whose dimensions are the same as this
+          renderer's.
+
+    Raises:
+      ValueError: `character` is not a valid character for this game, according
+          to the `Engine`'s configuration.
+    """
+    if character not in self._layers:
+      raise ValueError('character {} does not seem to be a valid character for '
+                       'this game'.format(str(character)))
+    self._board[curtain] = ord(character)
+    np.copyto(self._layers[character], curtain)
+
+  def render(self):
+    """Derive an `Observation` from this renderer's "canvas".
+
+    Reminders: the values in the returned `Observation` should be accessed in
+    a *read-only* manner exclusively; furthermore, if any renderer method is
+    called after `render()`, the contents of the `Observation` returned in that
+    `render()` call are *undefined* (i.e. not guaranteed to be anything---they
+    could be blank, random garbage, whatever).
+
+    Returns:
+      An `Observation` whose data members are derived from the information
+      presented to this renderer since the last call to its `clear()` method.
+      The `board` is a numpy array where characters overlapping is resolved by
+      picking the one with the highest z-ordering. The `layers` show all
+      characters, whether or not they have been occluded in the `board`.
+    """
+    return Observation(board=self._board, layers=self._layers)
+
+  @property
+  def shape(self):
+    """The 2-D dimensions of this renderer."""
     return self._board.shape
 
 

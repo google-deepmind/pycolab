@@ -95,7 +95,7 @@ class Engine(object):
   now!) and then the docstring for the `Engine` constructor.
   """
 
-  def __init__(self, rows, cols):
+  def __init__(self, rows, cols, occlusion_in_layers=True):
     """Construct a new pycolab game engine.
 
     Builds a new pycolab game engine, ready to be populated with a `Backdrop`,
@@ -192,9 +192,25 @@ class Engine(object):
     Args:
       rows: Height of the game board.
       cols: Width of the game board.
+      occlusion_in_layers: If `True` (the default), game entities or `Backdrop`
+          characters that occupy the same position on the game board will be
+          rendered into the `layers` member of `rendering.Observation`s with
+          "occlusion": only the entity that appears latest in the game's Z-order
+          will have its `layers` entry at that position set to `True`. If
+          `False`, all entities and `Backdrop` characters at that position will
+          have `True` in their `layers` entries there.
+
+          This flag does not change the rendering of the "flat" `board` member
+          of `Observation`, which always paints game entities on top of each
+          other as dictated by the Z-order.
+
+          **NOTE: This flag also determines the occlusion behavior in `layers`
+          arguments to all game entities' `update` methods; see docstrings in
+          [things.py] for details.**
     """
     self._rows = rows
     self._cols = cols
+    self._occlusion_in_layers = occlusion_in_layers
 
     # This game's Plot object
     self._the_plot = plot.Plot()
@@ -546,8 +562,12 @@ class Engine(object):
 
     # Construct the game's observation renderer.
     chars = set(self._sprites_and_drapes.keys()).union(self._backdrop.palette)
-    self._renderer = rendering.BaseObservationRenderer(
-        self._rows, self._cols, chars)
+    if self._occlusion_in_layers:
+      self._renderer = rendering.BaseObservationRenderer(
+          self._rows, self._cols, chars)
+    else:
+      self._renderer = rendering.BaseUnoccludedObservationRenderer(
+          self._rows, self._cols, chars)
 
     # Render a "pre-initial" board rendering from all of the data in the
     # Engine's Backdrop, Sprites, and Drapes. This rendering is only used as

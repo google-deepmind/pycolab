@@ -30,6 +30,7 @@ import unittest
 
 from pycolab import ascii_art
 from pycolab import rendering
+from pycolab import things as plab_things
 from pycolab.tests import test_things as tt
 
 
@@ -352,16 +353,30 @@ class EngineTest(tt.PycolabTestCase):
     self.assertEqual(b_update_group, b_new_update_group)
     self.assertEqual(c_update_group, c_new_update_group)
 
-  def testRendering(self):
-    """Test various rendering utilities."""
+  def testRenderingWithOcclusion(self):
+    """Test rendering of non-overlapping game entities (occlusion enabled).
 
-    # This helper will allow us to compare numpy bool_ arrays with "art" drawn
-    # as lists of '0' and '1' characters.
-    def assertMask(actual_mask, mask_art, err_msg=''):  # pylint: disable=invalid-name
-      np.testing.assert_array_equal(
-          actual_mask,
-          np.array([list(row) for row in mask_art]).astype(bool),
-          err_msg)
+    Note: although this test specifies that the engine should render overlapping
+    game entities in a particular way, it does not test this rendering
+    behaviour, focusing instead on non-overlapping game entities (which should
+    look identical in all renderings). Specific tests of occlusion behaviour
+    appear in `testOcclusionInLayers`.
+    """
+    self._testRendering(occlusion_in_layers=True)
+
+  def testRenderingWithoutOcclusion(self):
+    """Test rendering of non-overlapping game entities (occlusion disabled).
+
+    Note: although this test specifies that the engine should render overlapping
+    game entities in a particular way, it does not test this rendering
+    behaviour, focusing instead on non-overlapping game entities (which should
+    look identical in all renderings). Specific tests of occlusion behaviour
+    appear in `testOcclusionInLayers`.
+    """
+    self._testRendering(occlusion_in_layers=False)
+
+  def _testRendering(self, occlusion_in_layers):
+    """Test rendering of non-overlapping game entities."""
 
     # Our test concerns renderings of this game world.
     art = ['..H..H..o..',
@@ -372,7 +387,8 @@ class EngineTest(tt.PycolabTestCase):
     engine = ascii_art.ascii_art_to_game(
         art=art, what_lies_beneath='.',
         drapes=dict(
-            Q=tt.TestDrape))
+            Q=tt.TestDrape),
+        occlusion_in_layers=occlusion_in_layers)
 
     ### GAME ITERATION 0. We just run it to get an observation.
 
@@ -386,25 +402,25 @@ class EngineTest(tt.PycolabTestCase):
                      sorted(list('.HioQ')))
 
     # Check that all the layer masks have the right contents.
-    assertMask(observation.layers['.'], ['11011011011',
-                                         '11000011011',
-                                         '11011011011'])
+    self._assertMask(observation.layers['.'], ['11011011011',
+                                               '11000011011',
+                                               '11011011011'])
 
-    assertMask(observation.layers['H'], ['00100100000',
-                                         '00111100000',
-                                         '00100100000'])
+    self._assertMask(observation.layers['H'], ['00100100000',
+                                               '00111100000',
+                                               '00100100000'])
 
-    assertMask(observation.layers['i'], ['00000000000',
-                                         '00000000100',
-                                         '00000000100'])
+    self._assertMask(observation.layers['i'], ['00000000000',
+                                               '00000000100',
+                                               '00000000100'])
 
-    assertMask(observation.layers['o'], ['00000000100',
-                                         '00000000000',
-                                         '00000000000'])
+    self._assertMask(observation.layers['o'], ['00000000100',
+                                               '00000000000',
+                                               '00000000000'])
 
-    assertMask(observation.layers['Q'], ['00000000000',
-                                         '00000000000',
-                                         '00000000000'])
+    self._assertMask(observation.layers['Q'], ['00000000000',
+                                               '00000000000',
+                                               '00000000000'])
 
     ### Test correct operation of ObservationCharacterRepainter.
 
@@ -422,21 +438,21 @@ class EngineTest(tt.PycolabTestCase):
                      sorted(list('.JoM')))
 
     # The binary feature masks should have these contents:
-    assertMask(repainted.layers['.'], ['11011011011',
-                                       '11000011011',
-                                       '11011011011'])
+    self._assertMask(repainted.layers['.'], ['11011011011',
+                                             '11000011011',
+                                             '11011011011'])
 
-    assertMask(repainted.layers['J'], ['00100100000',
-                                       '00111100100',
-                                       '00100100100'])
+    self._assertMask(repainted.layers['J'], ['00100100000',
+                                             '00111100100',
+                                             '00100100100'])
 
-    assertMask(repainted.layers['o'], ['00000000100',
-                                       '00000000000',
-                                       '00000000000'])
+    self._assertMask(repainted.layers['o'], ['00000000100',
+                                             '00000000000',
+                                             '00000000000'])
 
-    assertMask(repainted.layers['M'], ['00000000000',
-                                       '00000000000',
-                                       '00000000000'])
+    self._assertMask(repainted.layers['M'], ['00000000000',
+                                             '00000000000',
+                                             '00000000000'])
 
     ### Test correct operation of ObservationToArray for 2-D and 3-D arrays.
 
@@ -481,21 +497,21 @@ class EngineTest(tt.PycolabTestCase):
     converted = converter(repainted)
     self.assertEqual(converted.shape, (4, 3, 11))
 
-    assertMask(converted[0, :], ['11011011011',
-                                 '11000011011',
-                                 '11011011011'])
+    self._assertMask(converted[0, :], ['11011011011',
+                                       '11000011011',
+                                       '11011011011'])
 
-    assertMask(converted[1, :], ['00100100000',
-                                 '00111100100',
-                                 '00100100100'])
+    self._assertMask(converted[1, :], ['00100100000',
+                                       '00111100100',
+                                       '00100100100'])
 
-    assertMask(converted[2, :], ['00000000100',
-                                 '00000000000',
-                                 '00000000000'])
+    self._assertMask(converted[2, :], ['00000000100',
+                                       '00000000000',
+                                       '00000000000'])
 
-    assertMask(converted[3, :], ['00000000000',
-                                 '00000000000',
-                                 '00000000000'])
+    self._assertMask(converted[3, :], ['00000000000',
+                                       '00000000000',
+                                       '00000000000'])
 
     # And another layer permutation test for the 3-D case.
     converter = rendering.ObservationToArray({'.': (1, 0, 0, 0),
@@ -506,21 +522,21 @@ class EngineTest(tt.PycolabTestCase):
     converted = converter(repainted)
     self.assertEqual(converted.shape, (3, 11, 4))
 
-    assertMask(converted[..., 0], ['11011011011',
-                                   '11000011011',
-                                   '11011011011'])
+    self._assertMask(converted[..., 0], ['11011011011',
+                                         '11000011011',
+                                         '11011011011'])
 
-    assertMask(converted[..., 1], ['00100100000',
-                                   '00111100100',
-                                   '00100100100'])
+    self._assertMask(converted[..., 1], ['00100100000',
+                                         '00111100100',
+                                         '00100100100'])
 
-    assertMask(converted[..., 2], ['00000000100',
-                                   '00000000000',
-                                   '00000000000'])
+    self._assertMask(converted[..., 2], ['00000000100',
+                                         '00000000000',
+                                         '00000000000'])
 
-    assertMask(converted[..., 3], ['00000000000',
-                                   '00000000000',
-                                   '00000000000'])
+    self._assertMask(converted[..., 3], ['00000000000',
+                                         '00000000000',
+                                         '00000000000'])
 
     ### Test ObservationToFeatureArray, which creates 3-D feature arrays faster.
 
@@ -528,21 +544,21 @@ class EngineTest(tt.PycolabTestCase):
     converted = converter(repainted)
     self.assertEqual(converted.shape, (4, 3, 11))
 
-    assertMask(converted[0, :], ['11011011011',
-                                 '11000011011',
-                                 '11011011011'])
+    self._assertMask(converted[0, :], ['11011011011',
+                                       '11000011011',
+                                       '11011011011'])
 
-    assertMask(converted[1, :], ['00100100000',
-                                 '00111100100',
-                                 '00100100100'])
+    self._assertMask(converted[1, :], ['00100100000',
+                                       '00111100100',
+                                       '00100100100'])
 
-    assertMask(converted[2, :], ['00000000100',
-                                 '00000000000',
-                                 '00000000000'])
+    self._assertMask(converted[2, :], ['00000000100',
+                                       '00000000000',
+                                       '00000000000'])
 
-    assertMask(converted[3, :], ['00000000000',
-                                 '00000000000',
-                                 '00000000000'])
+    self._assertMask(converted[3, :], ['00000000000',
+                                       '00000000000',
+                                       '00000000000'])
 
     ### Test ObservationToFeatureArray's layer permutation capability.
 
@@ -550,14 +566,85 @@ class EngineTest(tt.PycolabTestCase):
     converted = converter(repainted)
     self.assertEqual(converted.shape, (3, 2, 11))
 
-    assertMask(converted[0, :], ['11011011011',
-                                 '00100100000'])
+    self._assertMask(converted[0, :], ['11011011011',
+                                       '00100100000'])
 
-    assertMask(converted[1, :], ['11000011011',
-                                 '00111100100'])
+    self._assertMask(converted[1, :], ['11000011011',
+                                       '00111100100'])
 
-    assertMask(converted[2, :], ['11011011011',
-                                 '00100100100'])
+    self._assertMask(converted[2, :], ['11011011011',
+                                       '00100100100'])
+
+  def testOcclusionInLayers(self):
+    """Test rendering of overlapping game entities."""
+
+    class FullOnDrape(plab_things.Drape):
+      """A `Drape` class that fills its curtain immediately on construction."""
+
+      def __init__(self, curtain, character):
+        curtain.fill(True)
+        super(FullOnDrape, self).__init__(curtain, character)
+
+      def update(self, actions, board, layers, backdrop, things, the_plot):
+        """Does nothing."""
+        pass
+
+    def build_engine(occlusion_in_layers):
+      # Our test concerns renderings of this game world.
+      art = ['..',
+             '..']
+
+      # Here we make the game. The sprite `a` will cover a Drape element `b` ,
+      # which covers another Sprite `c`, but we should still be able to see them
+      # in the layers, because `occlusion_in_layers` is set to `False`. In the
+      # flat `board`, occlusion stil occurs and should only see those entities
+      # with higher z-order.
+      engine = ascii_art.ascii_art_to_game(
+          art=art, what_lies_beneath='.',
+          # Note: since a and c do not appear in the game art, these sprites
+          # are placed in the top-left corner (0, 0).
+          sprites=dict(a=ascii_art.Partial(tt.TestMazeWalker, impassable=''),
+                       c=ascii_art.Partial(tt.TestMazeWalker, impassable='')),
+          drapes=dict(b=FullOnDrape),
+          occlusion_in_layers=occlusion_in_layers,
+          z_order='abc')
+      return engine
+
+    # Test occlusion disabled in layers
+    engine = build_engine(False)
+    observation, unused_reward, unused_discount = engine.its_showtime()
+    self._assertMask(observation.layers['.'], ['11',
+                                               '11'])
+    self._assertMask(observation.layers['a'], ['10',
+                                               '00'])
+    self._assertMask(observation.layers['b'], ['11',
+                                               '11'])
+    self._assertMask(observation.layers['c'], ['10',
+                                               '00'])
+    # Note that occlusion still occurs in the flat `board`.
+    self.assertBoard(observation.board, ['cb',
+                                         'bb'])
+
+    # Test occlusion enabled in layers
+    engine = build_engine(True)
+    observation, unused_reward, unused_discount = engine.its_showtime()
+    self._assertMask(observation.layers['.'], ['00',
+                                               '00'])
+    self._assertMask(observation.layers['a'], ['00',
+                                               '00'])
+    self._assertMask(observation.layers['b'], ['01',
+                                               '11'])
+    self._assertMask(observation.layers['c'], ['10',
+                                               '00'])
+    self.assertBoard(observation.board, ['cb',
+                                         'bb'])
+
+  def _assertMask(self, actual_mask, mask_art, err_msg=''):  # pylint: disable=invalid-name
+    """Compares numpy bool_ arrays with "art" drawn as lists of '0' and '1'."""
+    np.testing.assert_array_equal(
+        actual_mask,
+        np.array([list(row) for row in mask_art]).astype(bool),
+        err_msg)
 
 
 def main(argv=()):

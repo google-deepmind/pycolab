@@ -32,7 +32,8 @@ def ascii_art_to_game(art,
                       what_lies_beneath,
                       sprites=None, drapes=None, backdrop=things.Backdrop,
                       update_schedule=None,
-                      z_order=None):
+                      z_order=None,
+                      occlusion_in_layers=True):
   """Construct a pycolab game from an ASCII art diagram.
 
   This function helps to turn ASCII art diagrams like the following
@@ -113,6 +114,21 @@ def ascii_art_to_game(art,
         ordering of the `Sprite`s and `Drape`s (from back to front). (Optional;
         if unspecified, the ordering will be the same as what's used for
         `update_schedule`).
+    occlusion_in_layers: If `True` (the default), game entities or `Backdrop`
+        characters that occupy the same position on the game board will be
+        rendered into the `layers` member of `rendering.Observation`s with
+        "occlusion": only the entity that appears latest in the game's Z-order
+        will have its `layers` entry at that position set to `True`. If
+        `False`, all entities and `Backdrop` characters at that position will
+        have `True` in their `layers` entries there.
+
+        This flag does not change the rendering of the "flat" `board` member
+        of `Observation`, which always paints game entities on top of each
+        other as dictated by the Z-order.
+
+        **NOTE: This flag also determines the occlusion behavior in `layers`
+        arguments to all game entities' `update` methods; see docstrings in
+        [things.py] for details.**
 
   Returns:
     An initialised `Engine` object as described.
@@ -224,7 +240,7 @@ def ascii_art_to_game(art,
 
   ### 5. Construct engine; populate with Sprites and Drapes ###
 
-  game = engine.Engine(*art.shape)
+  game = engine.Engine(*art.shape, occlusion_in_layers=occlusion_in_layers)
 
   # Sprites and Drapes are added according to the depth-first traversal of the
   # update schedule.

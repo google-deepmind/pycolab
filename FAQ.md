@@ -10,11 +10,12 @@ the data inside via the `Engine.the_plot` attribute.
 
 ### 2. How do I disable occlusion in the `layers` argument to `update()`?
 
-You can't, but there's an easy workaround.
+There are several options.
 
-The `layers` dict supplied to the `update()` methods of Sprites and Drapes show
-where different characters appear on the game board. For example, if you have
-two Drapes on the game board, A and B, and they look like this:
+Background: by default, the `layers` dict supplied to the `update()` methods of
+Sprites and Drapes show where different characters appear on the game board. For
+example, if you have two Drapes on the game board, A and B, and they look like
+this:
 
 ```
    A: AAAAAA     B: BBB...
@@ -42,11 +43,19 @@ This means the 'A' and 'B' entries in the `layers` dict will look like this:
       ......        XXX...
 ```
 
-If you'd like have a look at all of A, don't look in `layers`. Instead, look
-at A's curtain directly through the `things` argument to `update`:
-`things['A'].curtain`. Note that this will only work for Drapes; Sprites don't
-express a curtain, only a (row, column) screen position under the `position`
-attribute. Hopefully this will be useful for locating an occluded sprite.
+The easiest approach is to disable occlusion in layers when constructing your
+pycolab `Engine`. See the `occlusion_in_layers` argument to the `Engine`
+constructor and to `ascii_art.ascii_art_to_game()`.
+
+Besides changing the behaviour of `layers` arguments to `update()` methods, this
+approach also disables occlusion in the `layers` field of `Observation`
+namedtuples returned by `engine.play()`. If this is unacceptable, there is an
+easy second workaround. If you'd like have a look at all of A, don't look in
+`layers`. Instead, look at A's curtain directly through the `things` argument to
+`update`: `things['A'].curtain`. Note that this will only work for Drapes;
+Sprites don't express a curtain, only a (row, column) screen position under the
+`position` attribute. Hopefully this will be useful for locating an occluded
+sprite.
 
 ### 3. What are the ways to get a game with top-down scrolling?
 
