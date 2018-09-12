@@ -53,7 +53,7 @@ class PlayerSprite(prefab_sprites.MazeWalker):
 
   This `Sprite` ties actions to going in the four cardinal directions. If we
   reach a magical location (in this example, (4, 3)), the agent receives a
-  reward of 1 and the epsiode terminates.
+  reward of 1 and the episode terminates.
   """
 
   def __init__(self, corner, position, character):
