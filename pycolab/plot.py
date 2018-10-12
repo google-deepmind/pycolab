@@ -1,4 +1,4 @@
-# Copyright 2017 the pycolab Authors
+# Copyright 2018 the pycolab Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ class Plot(dict):
   are not really meant to talk to each other directly; instead, they leave
   messages for each other in the game's `Plot` object. With the exception of
   messages to the `Engine`, these messages are free-form and persistent; in
-  fact, let's drop the pretence---a `Plot` is really just a `dict` with some
+  fact, let's drop the pretense---a `Plot` is really just a `dict` with some
   extra methods and properties, and to talk to each other, these entities should
   just modify the dict in the usual ways, adding, removing, and modyfing
   whatever entries they like. (Responsibly, of course.)
@@ -56,6 +56,11 @@ class Plot(dict):
 
   A dedicated method exists within the `Plot` object for all of these actions.
 
+  The `Plot` object also has an imporant role for games that participate in
+  `Story`s: values in the `Plot` persist between games; in fact, they are the
+  only data guaranteed to do so. Individual games that participate in a `Story`
+  also use the `Plot` to control what happens next after they terminate.
+
   Lastly, the `Plot` object contains a number of public attributes that the
   `Engine` can use to communicate various statistics about the game to the
   various other game entities.
@@ -65,8 +70,8 @@ class Plot(dict):
     """A container for instructions for modifying an `Engine`'s internal state.
 
     External code is not meant to manipulate `_EngineDirectives` objects
-    directly, but `Engine` and `Plot` objects do. Properties of this class
-    include:
+    directly, but `Engine` and `Plot` objects can do it. Properties of this
+    class include:
 
     * `z_updates`: an indexable of 2-tuples `(c1, c2)`, whose semantics are
       "move the `Sprite` or `Drape` that paints with character `c1` in front of
@@ -110,6 +115,17 @@ class Plot(dict):
     # Will hold the current update group when the `update` methods of `Sprite`s
     # and `Drape`s are called.
     self._update_group = None
+
+    # For Storys only: holds keys or indices indicating which game preceded
+    # the current game, which game is the current game, and which game should
+    # be started next after the current game terminates, respectively. A None
+    # value for _next_chapter means that the story should terminate after the
+    # current game ends.
+    #
+    # These members are not used if a Story is not underway.
+    self._prior_chapter = None
+    self._this_chapter = None
+    self._next_chapter = None
 
     # Set an initial set of engine directives (at self._engine_directives),
     # which basically amount to telling the Engine do nothing.
@@ -176,7 +192,7 @@ class Plot(dict):
       ValueError: if `discount` is not in the [0,1] range.
     """
     if not 0.0 <= discount <= 1.0:
-      raise ValueError('Pcontinue must be in range [0,1]')
+      raise ValueError('Discount must be in range [0,1].')
 
     # Construct a new set of engine directives with the death warrant signed.
     self._engine_directives.game_over = True
@@ -252,7 +268,7 @@ class Plot(dict):
       ValueError: if `discount` is not in the [0,1] range.
     """
     if not 0.0 <= discount <= 1.0:
-      raise ValueError('Pcontinue must be in range [0,1]')
+      raise ValueError('Default discount must be in range [0,1].')
     self._engine_directives.discount = discount
 
   @property
@@ -269,6 +285,47 @@ class Plot(dict):
   def default_discount(self):
     """The current non-terminal discount factor used by the `Engine`."""
     return self._engine_directives.discount
+
+  ### Public properties for global story state. ###
+
+  @property
+  def prior_chapter(self):
+    """Key/index for the prior game in a `Story`, or None for no prior game."""
+    return self._prior_chapter
+
+  @property
+  def this_chapter(self):
+    """Key/index for the current game in a `Story`."""
+    return self._this_chapter
+
+  @property
+  def next_chapter(self):
+    """Key/index for the next game in a `Story`, or None for no next game."""
+    return self._next_chapter
+
+  @next_chapter.setter
+  def next_chapter(self, next_chapter):
+    """Indicate which game should appear next in the current `Story`.
+
+    If the current game is running as part of a `Story`, and if that `Story` was
+    initialised with a dict as the `chapters` constructor argument, this method
+    allows game entities to indicate which entry in the `chapters` dict holds
+    the next game that the `Story` should run after the current game terminates.
+    Or, if called with a `None` argument, this method directs the `Story` to
+    report termination to the player after the current game terminates. Either
+    way, the last call to this method before termination is the one that
+    determines what actually happens.
+
+    This method only does something meaningful if a `Story` is actually underway
+    and if the `Story`'s `chapters` constructor argument was a dict; otherwise
+    it has no effect whatsoever.
+
+    Args:
+      next_chapter: A key into the dict passed as the `chapters` argument to the
+          `Story` constructor, or None. No checking is done against `chapters`
+          to ensure that this argument is a valid key.
+    """
+    self._next_chapter = next_chapter
 
   ### Setters and other helpers for Engine ###
 
@@ -304,6 +361,18 @@ class Plot(dict):
       This `Plot`'s set of directions to the `Engine`.
     """
     return self._engine_directives
+
+  ### Setters and other helpers for Story ###
+
+  @prior_chapter.setter
+  def prior_chapter(self, val):
+    """Update last chapter. Only `Story` and tests may use this setter."""
+    self._prior_chapter = val
+
+  @this_chapter.setter
+  def this_chapter(self, val):
+    """Update current chapter. Only `Story` and tests may use this setter."""
+    self._this_chapter = val
 
   ### Private helpers for error detection ###
 
