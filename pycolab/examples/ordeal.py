@@ -269,7 +269,7 @@ class PlayerSprite(prefab_sprites.MazeWalker):
 def main(argv=()):
   del argv  # Unused.
 
-  # Build an Extraterrestrial Marauders game.
+  # Build an Ordeal game.
   game = make_game()
 
   # Make a CursesUi to play it with.
