@@ -905,7 +905,8 @@ class Palette(object):
       bang='!', exclamation='!', exclamation_point='!', exclamation_pt='!',
       at='@',
       # regrettably, £ is not ASCII.
-      hash='#', octothorpe='#', number_sign='#', pigpen='#', pound='#',
+      hash='#', hashtag='#', octothorpe='#', number_sign='#', pigpen='#',
+      pound='#',
       dollar='$', dollar_sign='$', buck='$', mammon='$',
       percent='%', percent_sign='%', food='%',
       carat='^', circumflex='^', trap='^',
