@@ -3,10 +3,6 @@
 A highly-customisable gridworld game engine with some batteries included.
 Make your own gridworld games to test reinforcement learning agents!
 
-!["Ordeal" example game animation](ordeal.gif)
-
-(Above: the example game called "Ordeal".)
-
 ## Play some games!
 
 If you're new, why not try playing some games first? For the full colour
