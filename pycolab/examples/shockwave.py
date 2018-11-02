@@ -146,7 +146,8 @@ class ShockwaveDrape(plab_things.Drape):
 
     self.curtain[:] = (
         (self._distance_from_impact > self._steps_since_impact) &
-        (self._distance_from_impact <= self._steps_since_impact + self._width)
+        (self._distance_from_impact <= self._steps_since_impact + self._width) &
+        (np.logical_not(layers['=']))
     )
 
     # Check if the player is safe, dead, or has won.
