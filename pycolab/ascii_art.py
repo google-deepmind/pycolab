@@ -315,7 +315,8 @@ def ascii_art_to_uint8_nparray(art):
       'the argument to ascii_art_to_uint8_nparray must be a list (or tuple) '
       'of strings containing the same number of strictly-ASCII characters.')
   try:
-    art = np.vstack(np.fromstring(line, dtype=np.uint8) for line in art)
+    art = np.vstack([np.frombuffer(line.encode('ascii'), dtype=np.uint8) 
+                     for line in art])
   except ValueError as e:
     raise ValueError('{} (original error from numpy: {})'.format(error_text, e))
   except TypeError as e:
