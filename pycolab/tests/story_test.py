@@ -28,6 +28,8 @@ from pycolab import things as plab_things
 from pycolab.prefab_parts import sprites as prefab_sprites
 from pycolab.tests import test_things as tt
 
+import six
+
 
 class StoryTest(tt.PycolabTestCase):
 
@@ -307,7 +309,8 @@ class StoryTest(tt.PycolabTestCase):
          '...............'],
     ]
 
-    with self.assertRaisesRegexp(ValueError, 'observations that are the same'):
+    with six.assertRaisesRegex(self, ValueError,
+                               'observations that are the same'):
       _ = storytelling.Story([lambda art=a: self._make_game(art) for a in arts])
 
     # This next Story will fail because characters are shared between Sprites,
@@ -320,7 +323,7 @@ class StoryTest(tt.PycolabTestCase):
                     r'.*both a Sprite and a Drape: \[2\];'
                     r'.*both a Sprite and in a Backdrop: \[1\];'
                     r'.*both a Drape and in a Backdrop: \[3\].*')
-    with self.assertRaisesRegexp(ValueError, error_regexp):
+    with six.assertRaisesRegex(self, ValueError, error_regexp):
       _ = storytelling.Story([
           # pylint: disable=g-long-lambda
           lambda: ascii_art.ascii_art_to_game(art, what_lies_beneath='.',

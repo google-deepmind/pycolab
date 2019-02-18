@@ -29,6 +29,8 @@ from pycolab.prefab_parts import drapes as prefab_drapes
 from pycolab.protocols import scrolling
 from pycolab.tests import test_things as tt
 
+import six
+
 
 class ScrollingTest(tt.PycolabTestCase):
 
@@ -64,7 +66,7 @@ class ScrollingTest(tt.PycolabTestCase):
 
     # Confirm an exception if an entity requests scrolling information for a
     # scrolling group it doesn't belong to.
-    with self.assertRaisesRegexp(scrolling.Error, 'known to belong'):
+    with six.assertRaisesRegex(self, scrolling.Error, 'known to belong'):
       scrolling.get_order(sprite, the_plot, scrolling_group='cantaloupe')
 
     # Start over with a fresh Plot, and go back to the default scrolling group.
@@ -100,7 +102,7 @@ class ScrollingTest(tt.PycolabTestCase):
 
     # We advance to frame 102 and try to have the drape order some scrolling.
     the_plot.frame = 102
-    with self.assertRaisesRegexp(scrolling.Error, 'impossible'):
+    with six.assertRaisesRegex(self, scrolling.Error, 'impossible'):
       scrolling.order(drape, the_plot, motion=(1, 0))  # Illegal for 'P'.
     scrolling.order(drape, the_plot, motion=(1, 1))
 

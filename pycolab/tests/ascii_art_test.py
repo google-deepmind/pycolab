@@ -26,6 +26,8 @@ import unittest
 
 from pycolab import ascii_art
 
+import six
+
 
 class AsciiArtTest(unittest.TestCase):
 
@@ -37,19 +39,22 @@ class AsciiArtTest(unittest.TestCase):
 
     # Incorrect input: not all the same length.
     art = ['ab', 'bab']
-    with self.assertRaisesRegexp(
+    with six.assertRaisesRegex(
+        self,
         ValueError, 'except for the concatenation axis must match exactly'):
       _ = ascii_art.ascii_art_to_uint8_nparray(art)
 
     # Incorrect input: not all strings.
     art = ['a', 2]
-    with self.assertRaisesRegexp(
+    with six.assertRaisesRegex(
+        self,
         TypeError, 'the argument to ascii_art_to_uint8_nparray must be a list'):
       _ = ascii_art.ascii_art_to_uint8_nparray(art)
 
     # Incorrect input: list of list (special case of the above).
     art = [['a', 'b'], ['b', 'a']]
-    with self.assertRaisesRegexp(
+    with six.assertRaisesRegex(
+        self,
         TypeError, 'Did you pass a list of list of single characters?'):
       _ = ascii_art.ascii_art_to_uint8_nparray(art)
 
