@@ -961,6 +961,14 @@ class Palette(object):
   def __getitem__(self, key):
     return self._actual_lookup(key, IndexError)
 
+  def __getstate__(self):
+    # Because we define __getattr__, we also supply __getstate__ and
+    # __setstate__ to avoid recursion during some pickling and copy operations.
+    return self._legal_characters
+
+  def __setstate__(self, state):
+    self._legal_characters = set(state)
+
   def __contains__(self, key):
     # It is intentional, but probably not so important (as long as there are no
     # single-character aliases) that we do not do an aliases lookup for key.
